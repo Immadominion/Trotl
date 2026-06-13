@@ -1,0 +1,53 @@
+[package]
+name = "throtl-engine"
+version = "0.1.0"
+description = "Throtl — analog perps virtual-exposure engine on MagicBlock Ephemeral Rollups"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "throtl_engine"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+custom-heap = []
+custom-panic = []
+anchor-debug = []
+
+# Two unavoidable false-positives so CI can keep `clippy -D warnings` for everything real:
+#  * unexpected_cfgs: `target_os = "solana"` only exists on the SBF target, not on host/clippy.
+#  * diverging_sub_expression: emitted inside Anchor's `#[program]` macro expansion, not our code.
+[lints.rust]
+unexpected_cfgs = { level = "allow" }
+
+[lints.clippy]
+diverging_sub_expression = "allow"
+
+[dependencies]
+# Anchor 1.0.2 — depends on granular solana-* 3.x crates (NOT monolithic solana-program 4.x).
+# Do not add `solana-program` directly; use anchor_lang::solana_program re-exports.
+anchor-lang = { version = "1.0.2", features = ["init-if-needed"] }
+# MagicBlock ER — "anchor" feature => anchor-modern => anchor-lang ^1.0 (matches 1.0.2).
+# Never "anchor-compat" (legacy 0.28–0.31 path).
+ephemeral-rollups-sdk = { version = "0.15.4", features = ["anchor"] }
+# Anchor's #[account(zero_copy)] macro emits `bytemuck::{Pod,Zeroable}` derives at crate root.
+# `min_const_generics` makes Pod cover the [u8; 64] reserved field. Pin to Anchor's bytemuck (1.25).
+bytemuck = { version = "1.25", features = ["derive", "min_const_generics"] }
+
+[dev-dependencies]
+# litesvm instruction-level harness — solana 3.x, aligns with anchor-lang 1.0.2 (no cross-major).
+litesvm = "0.12"
+solana-account = "3"
+solana-clock = "3"
+solana-instruction = "3"
+solana-keypair = "3"
+solana-message = "3"
+solana-pubkey = "3"
+solana-signer = "3"
+solana-transaction = "3"

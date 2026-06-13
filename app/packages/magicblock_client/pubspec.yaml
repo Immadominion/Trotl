@@ -1,0 +1,21 @@
+name: magicblock_client
+description: >-
+  Real MagicBlock Ephemeral Rollup client — the Magic Router custom JSON-RPC methods (getRoutes,
+  getDelegationStatus, getBlockhashForAccounts), ER-node RPC/WS access, and the in-ER Pyth Lazer
+  oracle (PriceUpdateV2) offset parser. No mocks; live-verified against devnet-router.magicblock.app
+  and devnet-*.magicblock.app (docs/research/magicblock.md + the devnet-er-protocol verification).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  http: ^1.6.0
+  meta: ^1.16.0
+  solana: ^0.32.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^10.2.0

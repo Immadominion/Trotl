@@ -1,0 +1,18 @@
+name: throtl_core
+description: >-
+  Pure-Dart heart of Throtl — fixed-point virtual-position accounting (parity with the
+  throtl-engine Rust program), tick/reconciler/guardian state machines, and the simulation
+  harness. Zero Flutter / network dependencies; single-threaded-by-design (web has no isolates).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  meta: ^1.16.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^10.2.0

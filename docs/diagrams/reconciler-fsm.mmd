@@ -1,0 +1,15 @@
+stateDiagram-v2
+  [*] --> Synced
+  Synced --> Drifting: target leaves hysteresis band
+  Drifting --> Synced: drift clears before debounce
+  Drifting --> Settling: debounce elapsed, emit ONE bounded action (capped, inline stop)
+  Settling --> Settling: fill landed, keep converging toward target
+  Settling --> Synced: reached target within band
+  Synced --> Frozen: established position vanished (stop-out) while thumb still wants exposure
+  Settling --> Frozen: stop-out detected mid-settle
+  Frozen --> Frozen: thumb still pinned, refuse to re-open into the move
+  Frozen --> Synced: throttle released to flat, re-arm
+  Synced --> Degraded: link lost / oracle stale / ER-vs-guard divergence / market closed
+  Drifting --> Degraded
+  Settling --> Degraded
+  Degraded --> Synced: degraded gate clears

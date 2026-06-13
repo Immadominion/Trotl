@@ -1,0 +1,21 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+# `dart format` reads this width too, so local + CI agree.
+formatter:
+  page_width: 100
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # The pure-Dart core is money-path code; keep it strict.
+    public_member_api_docs: false
+    # Redundant with the 100-col formatter width above.
+    lines_longer_than_80_chars: false

@@ -1,0 +1,110 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  program:
+    name: throtl-engine (rust)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: programs/throtl-engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: programs/throtl-engine
+      - name: fmt
+        run: cargo fmt --manifest-path programs/throtl-engine/Cargo.toml --all -- --check
+      - name: clippy
+        run: cargo clippy --manifest-path programs/throtl-engine/Cargo.toml --lib -- -D warnings
+      - name: host tests (math + state layout + oracle)
+        run: cargo test --manifest-path programs/throtl-engine/Cargo.toml --lib
+      # NOTE: this fast job (no Solana toolchain) gates every PR on fmt + lib clippy + host unit
+      # tests. The SBF build, the litesvm adversarial/CU suite, and clippy over the test code run in
+      # `program-svm` below (needs cargo-build-sbf). Devnet ER integration stays manual (funds).
+
+  program-svm:
+    name: "throtl-engine (svm: litesvm adversarial + CU)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: install Solana toolchain (provides cargo-build-sbf)
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: programs/throtl-engine
+      - name: build SBF (.so the litesvm suite loads from target/deploy)
+        working-directory: programs/throtl-engine
+        run: cargo build-sbf
+      - name: clippy (all targets — lib + litesvm test crate)
+        working-directory: programs/throtl-engine
+        run: cargo clippy --all-targets -- -D warnings
+      - name: litesvm suite (instruction-level adversarial + tick CU regression)
+        working-directory: programs/throtl-engine
+        run: cargo test
+
+  core:
+    name: throtl_core (dart)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.12.2
+      - name: pub get (workspace)
+        run: dart pub get
+      - name: format
+        run: dart format --output=none --set-exit-if-changed packages
+      - name: analyze
+        run: dart analyze --fatal-infos packages
+      - name: test (all pure-Dart packages)
+        run: |
+          set -e
+          for p in throtl_core flash_client magicblock_client throtl_chain throtl_runtime throtl_live; do
+            echo "::group::$p"; (cd "packages/$p" && dart test); echo "::endgroup::"
+          done
+      # flash_client + magicblock_client fixture/parser tests use only committed fixtures / pure
+      # logic — no funds, no network. (The live-network probe `magicblock_client:probe` and the
+      # mainnet `flash_client:flash_lifecycle` are manual, never in CI.)
+      # Web canary: the --wasm gate is added once a Flutter package enters the workspace (ROADMAP M4+).
+
+  guardian:
+    name: guardian (typescript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/guardian
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: services/guardian/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: typecheck
+        run: pnpm typecheck
+      - name: test
+        run: pnpm test

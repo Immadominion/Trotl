@@ -1,0 +1,25 @@
+name: throtl_chain
+description: >-
+  throtl-engine on-chain interface for Dart: Anchor instruction encoders (discriminator + Borsh
+  args), RideSession + delegation PDA derivation, and the RideSession account reader. Grounded in the
+  generated IDL (programs/throtl-engine/target/idl/throtl_engine.json); delegation seeds verified
+  against magicblock-delegation-program-api 3.0.0.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  meta: ^1.16.0
+  solana: ^0.32.0
+
+dev_dependencies:
+  crypto: ^3.0.6
+  # for the M0.1b on-chain latency spike (bin/latency_spike.dart) only — not a runtime dep.
+  http: ^1.6.0
+  magicblock_client:
+    path: ../magicblock_client
+  test: ^1.25.0
+  very_good_analysis: ^10.2.0

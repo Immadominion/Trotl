@@ -1,0 +1,13 @@
+graph LR
+  START["Ride start"] --> INIT["init_ride + delegate_ride (L1)"]
+  INIT --> DELEG["RideSession PDA delegated to ER"]
+  DELEG --> TICK["tick() loop 20-33Hz (session-signed, gasless)"]
+  TICK --> MARK["mark virtual PnL vs in-ER Pyth Lazer"]
+  MARK --> ECHO["WS account-update -> decode RideSession"]
+  ECHO --> REC{"reconciler step"}
+  REC -->|"within band"| TICK
+  REC -->|"drift past debounce"| ACT["bounded Flash action + floor stop"]
+  ACT --> TICK
+  TICK -->|"release / stop-out"| FLAT["flatten -> request_settle (commit + undelegate)"]
+  FLAT --> CLOSE["close_ride (L1, rent back to owner)"]
+  CLOSE --> END["Ride end"]

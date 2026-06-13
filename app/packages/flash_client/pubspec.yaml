@@ -1,0 +1,21 @@
+name: flash_client
+description: >-
+  Real Flash Trade v2 client — the hosted REST tx-builder over the live API, the unsigned-v0
+  transaction signer (single ed25519 signature placed at the correct accountKeys index, blockhash
+  untouched), and submission/confirmation against the correct RPC (ER for trades, base for setup).
+  No mocks. Grounded in services/flash-spec/openapi.v2.json.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  http: ^1.6.0
+  meta: ^1.16.0
+  solana: ^0.32.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^10.2.0

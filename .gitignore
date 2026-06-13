@@ -1,0 +1,59 @@
+# ───────────────────────── secrets / env ─────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*-keypair.json
+**/keypairs/*.json
+!**/keypairs/.gitkeep
+# Defense-in-depth: never commit a key directory (spike funds, deploy authority, …).
+**/.keys/
+
+# ──────────────── internal / idea-phase artifacts (not public) ────────────────
+# Idea-discovery output + agent session state — kept locally, never pushed.
+.superstack/
+.claude/
+report-payload.json
+idea-shortlist-*.html
+idea-deep-dive-*.html
+
+# ───────────────────────── rust / anchor ─────────────────────────
+programs/**/target/
+target/
+**/*.rs.bk
+.anchor/
+test-ledger/
+**/Cargo.lock        # libraries: keep unlocked; the deployable program pins via toolchain
+!programs/**/Cargo.lock   # the program is a binary artifact: DO lock it
+
+# ───────────────────────── dart / flutter ────────────────────────
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/doc/api/
+*.iml
+.pub-cache/
+.pub/
+coverage/
+**/.fvm/
+
+# ───────────────────────── node / typescript ─────────────────────
+node_modules/
+dist/
+*.tsbuildinfo
+.turbo/
+npm-debug.log*
+pnpm-debug.log*
+
+# ───────────────────────── tooling / os ──────────────────────────
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+*.swp
+fixtures/recorded/*.local.json
+.gstack/

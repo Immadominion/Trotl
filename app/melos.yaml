@@ -1,0 +1,46 @@
+name: throtl
+
+packages:
+  - packages/**
+  - app
+
+command:
+  bootstrap:
+    # Pub workspace mode (Dart >= 3.6): one shared lockfile at the workspace root.
+    environment:
+      sdk: ^3.12.0
+
+scripts:
+  analyze:
+    description: Static analysis across all packages.
+    run: dart analyze --fatal-infos
+    exec:
+      concurrency: 4
+
+  test:
+    description: Run pure-Dart tests (throtl_core et al.).
+    run: dart test
+    exec:
+      concurrency: 4
+    packageFilters:
+      dirExists: test
+      flutter: false
+
+  test:flutter:
+    description: Run Flutter package tests.
+    run: flutter test
+    exec:
+      concurrency: 2
+    packageFilters:
+      dirExists: test
+      flutter: true
+
+  format:
+    description: Format check (CI-safe).
+    run: dart format --output=none --set-exit-if-changed .
+
+  gen:
+    description: Run build_runner codegen (freezed / json_serializable / borsh).
+    run: dart run build_runner build --delete-conflicting-outputs
+    packageFilters:
+      dependsOn: build_runner

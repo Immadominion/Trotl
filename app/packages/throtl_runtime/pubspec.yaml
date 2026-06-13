@@ -1,0 +1,24 @@
+name: throtl_runtime
+description: >-
+  The ride executor — orchestrates the pure reconciler FSM (throtl_core) against the real Flash
+  position, decoding ER RideSession snapshots (throtl_chain) into reconcile inputs and mapping each
+  bounded action onto Flash Trade calls. Ships with a deterministic simulation gateway so every
+  safety-critical path (stop-out → freeze, flip-with-inline-stop, snap-to-flat, settling double-guard,
+  degraded gating) is exercised end-to-end in CI with no funds and no network.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  meta: ^1.16.0
+  throtl_chain:
+    path: ../throtl_chain
+  throtl_core:
+    path: ../throtl_core
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^10.2.0

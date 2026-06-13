@@ -1,0 +1,31 @@
+name: throtl_live
+description: >-
+  Live I/O adapters that connect the pure throtl_runtime executor to real infrastructure: the ER
+  RideSession account-subscription feed (decoded via throtl_chain into reconcile observations) and the
+  RealFlashGateway (throtl_runtime's Flash order-planner → flash_client tx-builder → sign → submit →
+  trusted-position re-read). The pure transforms are unit-tested; live binaries run against devnet/mainnet.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flash_client:
+    path: ../flash_client
+  magicblock_client:
+    path: ../magicblock_client
+  meta: ^1.16.0
+  solana: ^0.32.0
+  throtl_chain:
+    path: ../throtl_chain
+  throtl_core:
+    path: ../throtl_core
+  throtl_runtime:
+    path: ../throtl_runtime
+
+dev_dependencies:
+  http: ^1.6.0
+  test: ^1.25.0
+  very_good_analysis: ^10.2.0

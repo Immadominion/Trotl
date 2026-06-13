@@ -1,0 +1,13 @@
+{
+  "account": {
+    "basketBump": 255,
+    "debits": [{ "amount": 11000000, "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" }],
+    "orders": [],
+    "ordersActive": false,
+    "owner": "Fd7K6ge6pRGgZVouaGXxtkU1tuncFd2AGd69rXQFnsT5",
+    "pendingCredits": [{ "amount": 10994783, "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" }],
+    "positions": [],
+    "positionsActive": false
+  },
+  "pubkey": "3CdhnJUrLao8Q9ECfpPzCY85Cm1xp4stmCkcQ3HQuULs"
+}

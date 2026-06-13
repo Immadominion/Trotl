@@ -1,0 +1,29 @@
+graph TD
+  subgraph MOBILE["Mobile - Flutter, self-custodied"]
+    THUMB["Analog throttle (thumb)"]
+    CORE["throtl_core: reconciler FSM + accounting"]
+    RT["throtl_runtime: executor + Flash planner"]
+    THUMB --> CORE --> RT
+  end
+
+  subgraph ER["MagicBlock Ephemeral Rollup (~30ms, gasless)"]
+    RIDE["RideSession PDA (delegated)"]
+    ORACLE["in-ER Pyth Lazer oracle"]
+  end
+
+  subgraph FLASH["Flash Trade - mainnet perps venue"]
+    POS["Real self-custodied position + floor stop"]
+  end
+
+  subgraph GUARD["Guardian - Railway, holds no keys"]
+    WATCH["off-phone loss-floor watcher"]
+    HERMES["independent Pyth Hermes mark"]
+  end
+
+  RT -->|"session-signed tick() 20-33Hz"| RIDE
+  RIDE -->|"marks virtual PnL vs"| ORACLE
+  RIDE -->|"WS account-subscribe + decode (advisory)"| RT
+  RT -->|"bounded reconcile: open / flip / flatten + inline stop"| POS
+  RIDE -.->|"subscribe"| WATCH
+  HERMES -->|"guard mark"| WATCH
+  WATCH -->|"breach: submit pre-signed close-only flatten"| POS

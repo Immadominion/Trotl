@@ -1,0 +1,43 @@
+{
+  "owner": "Fd7K6ge6pRGgZVouaGXxtkU1tuncFd2AGd69rXQFnsT5",
+  "basketPubkey": "3CdhnJUrLao8Q9ECfpPzCY85Cm1xp4stmCkcQ3HQuULs",
+  "basketData": "209rh+fz2vjZQ6nDQQjhCv+rYAYPqGM9Dh0j/fbSbBCHkhymrXj4OAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wAAAAAAAQABAAAAxvp6877brTo9ZfNqq8l0MbG75MLS9uDkfKYCA0UvXWHA2KcAAAAAAAAAAAABAAAAdBcHIXL4BD3VdX3wRdB7PQF5CbUApsh7rkqiCcxjgt82AC1qAAAAADYALWoAAAAAUQThjwEAAAD4////0PjDCQAAAAAyuKcAAAAAACK8NQwAAAAAbMWnAAAAAAAAAAAAAAAAAJqfqwAAAAAAAAAAAAAAAAAJCQAAAAAAAAAAAAA=",
+  "positionMetrics": {
+    "8pAfDWb9Prg3FTV7WFuXG8hthmZdf7EG83hmxzWSKNxv": {
+      "marketSymbol": "SOL",
+      "collateralSymbol": "SOL",
+      "sideUi": "Long",
+      "entryPriceUi": "67.08",
+      "sizeAmountUi": "0.1638",
+      "sizeUsdUi": "10.99",
+      "collateralAmountUi": "0.1638",
+      "collateralUsdUi": "10.99",
+      "pnlWithFeeUsdUi": "-1.10",
+      "pnlPercentageWithFee": "-10.02",
+      "pnlWithoutFeeUsdUi": "-1.09",
+      "pnlPercentageWithoutFee": "-10.00",
+      "liquidationPriceUi": "6.76",
+      "leverageUi": "1.11",
+      "profitUsd": "0",
+      "lossUsd": "1099172",
+      "exitFeeUsd": "2199",
+      "borrowFeeUsd": "0",
+      "totalFeeUsd": "2199",
+      "leverage": "11109",
+      "marginUsd": "9893681",
+      "liquidationPrice": {
+        "price": "676259454",
+        "exponent": "-8",
+        "confidence": "0",
+        "timestamp": "0"
+      },
+      "exitPrice": {
+        "price": "6037966989",
+        "exponent": "-8",
+        "confidence": "0",
+        "timestamp": "0"
+      }
+    }
+  },
+  "orderMetrics": {}
+}

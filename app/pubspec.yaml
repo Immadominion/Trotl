@@ -1,0 +1,19 @@
+# Dart pub workspace root for the Throtl Flutter monorepo (managed by Melos 7.8.2).
+# Member packages opt in via `resolution: workspace`. Requires Dart >= 3.12 (Flutter 3.44.2).
+name: throtl_workspace
+publish_to: none
+environment:
+  sdk: ^3.12.0
+
+# Workspace members are added as each package is created (per ROADMAP milestone).
+# Pub workspace requires every listed path to exist with `resolution: workspace`.
+workspace:
+  - packages/throtl_core
+  - packages/flash_client
+  - packages/magicblock_client
+  - packages/throtl_chain
+  - packages/throtl_runtime
+  - packages/throtl_live
+
+dev_dependencies:
+  melos: ^7.8.2
