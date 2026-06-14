@@ -16,6 +16,23 @@
 report-payload.json
 idea-shortlist-*.html
 idea-deep-dive-*.html
+# Detailed pre-mainnet security audit — kept private (it spells out a fixed exploit + an
+# ER-SDK root cause that affects other teams; responsible disclosure). The public README
+# carries only the high-level "audited, found+fixed a critical, proven by tests" summary.
+**/SECURITY-AUDIT.md
+.gstack/security-reports/
+
+# Internal working docs — not needed in the public repo (planning / spikes / research / version pins).
+docs/UI-BUILD-PLAN.md
+docs/FEASIBILITY.md
+docs/M0-SPIKE-RESULTS.md
+docs/VERSIONS.md
+docs/research/
+
+# Agent tooling + scratch
+.agents/
+skills-lock.json
+tmp/
 
 # ───────────────────────── rust / anchor ─────────────────────────
 programs/**/target/
@@ -38,6 +55,20 @@ build/
 .pub/
 coverage/
 **/.fvm/
+# Android (Gradle build caches + local config)
+**/.gradle/
+**/android/local.properties
+**/android/key.properties
+**/android/.gradle/
+**/android/app/release/
+# iOS / macOS (CocoaPods + Flutter ephemeral)
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/macos/Pods/
+**/macos/Flutter/ephemeral/
 
 # ───────────────────────── node / typescript ─────────────────────
 node_modules/
@@ -57,3 +88,6 @@ pnpm-debug.log*
 *.swp
 fixtures/recorded/*.local.json
 .gstack/
+
+# Design handoff reference (not for public repo)
+.design-ref/

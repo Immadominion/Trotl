@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { loadConfig } from './config.js';
 import { logger } from './logger.js';
 import { fetchHermesPriceE9, PYTH_SOL_USD_FEED_ID, type GuardPrice } from './oracle.js';
+import { RideStore } from './store.js';
 import {
   GuardianWatcher,
   type GuardMarkSource,
@@ -25,6 +26,12 @@ import {
  *   POST /guard/disarm   — stop watching a ride
  *   GET  /guard/status   — armed rides + last floor check (bigints serialized as strings)
  *   WS   /ws             — live telemetry: floor checks + breach alerts
+ *
+ *   Game UI read APIs (cockpit Season / Paddock / Share / live price proxy):
+ *   GET  /price/sol            — CORS-safe independent SOL/USD mark (for the web cockpit feed)
+ *   GET  /season/leaderboard   — ranked pilots by realized PnL per $ staked
+ *   GET  /paddock/history      — finalized ride records (?owner=&limit=)
+ *   GET  /share/:ridePubkey    — one ride record + receipt summary
  *
  * Trust boundary (DR-8): the guardian holds NO user keys. Its only money-moving capability is to
  * submit the exact pre-signed, flatten-scoped transaction on a floor breach — never open/withdraw.
@@ -124,6 +131,33 @@ app.post('/guard/disarm', async (c) => {
 });
 
 app.get('/guard/status', () => jsonBig(watcher.status()));
+
+// ── Game UI read APIs ────────────────────────────────────────────────────────────────────────────
+
+const store = new RideStore();
+
+/** CORS-safe independent SOL/USD mark, so the web cockpit can drive a live price without RPC CORS. */
+app.get('/price/sol', async (c) => {
+  const p = await guardMark('SOL');
+  if (!p) return c.json({ error: 'price unavailable' }, 503);
+  return jsonBig({ symbol: 'SOL', priceE9: p.priceE9, publishTime: p.publishTime });
+});
+
+app.get('/season/leaderboard', (c) =>
+  jsonBig(store.leaderboard(Number(c.req.query('limit') ?? '50'))),
+);
+
+app.get('/paddock/history', (c) =>
+  jsonBig({
+    owner: c.req.query('owner') ?? null,
+    sessions: store.history(c.req.query('owner'), Number(c.req.query('limit') ?? '20')),
+  }),
+);
+
+app.get('/share/:ridePubkey', (c) => {
+  const rec = store.byRide(c.req.param('ridePubkey'));
+  return rec ? jsonBig(rec) : c.json({ error: 'ride not found' }, 404);
+});
 
 const server = serve({ fetch: app.fetch, port: config.PORT }, (info) => {
   logger.info({ port: info.port }, 'guardian listening');

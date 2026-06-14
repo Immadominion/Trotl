@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Allow cleartext only to the loopback address: model_viewer_plus serves the
+     garage GLB from a local HttpServer on 127.0.0.1 and the WebView loads it.
+     Everything else (Solana RPC, guardian) stays HTTPS-only. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

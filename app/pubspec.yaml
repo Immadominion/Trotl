@@ -14,6 +14,15 @@ workspace:
   - packages/throtl_chain
   - packages/throtl_runtime
   - packages/throtl_live
+  - app # the Flutter cockpit (mobile/web racing-game UI)
 
 dev_dependencies:
   melos: ^7.8.2
+
+# solana_mobile_client (MWA) pins freezed_annotation ^2.x, but `solana ^0.32`
+# (used across the chain packages) needs ^3.x. The MWA client's generated code
+# defines its own `_privateConstructorUsedError`/`_$identity` and only uses the
+# `@Freezed` annotation class (still present in 3.x), so forcing 3.x compiles
+# both. Verified by `flutter analyze`.
+dependency_overrides:
+  freezed_annotation: ^3.1.0

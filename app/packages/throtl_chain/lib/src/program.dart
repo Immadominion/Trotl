@@ -14,6 +14,8 @@ const String throtlEngineProgramId = 'YSaqfuc753DkHZoaEvdNMSTQTf4hEuTtP65hszuvJy
 const String delegationProgramId = 'DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh';
 const String oracleProgramId = 'PriCems5tHihc6UDXDjzjeawomAwBduWMGAi8ZUjppd';
 const String magicProgramId = 'Magic11111111111111111111111111111111111111';
+/// MagicBlock commit-context account (`request_settle` pins this; the program rejects any other).
+const String magicContextId = 'MagicContext1111111111111111111111111111111';
 const String systemProgramId = '11111111111111111111111111111111';
 
 // ── instruction discriminators (from target/idl/throtl_engine.json) ────────

@@ -26,7 +26,7 @@ final String _fixturesDir = _env(
   'FLASH_FIXTURES',
   '/Users/mac/Documents/codes/bounties/mageekbloc/fixtures/flash',
 );
-final String _baseRpc = _env('BASE_RPC', 'https://api.mainnet-beta.solana.com');
+final String _baseRpc = _env('BASE_RPC', 'https://betsey-5efi0d-fast-devnet.helius-rpc.com');
 final String _erRpc = _env('ER_RPC', 'https://flash.magicblock.xyz');
 
 void _save(String name, Object data) {

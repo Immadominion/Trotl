@@ -1,0 +1,62 @@
+name: throtl
+description: >-
+  Throtl — the analog exchange. The mobile/web cockpit: a chunky cartoon racing game where you
+  race the chart. The practice ride drives the real reconciler/accounting (throtl_runtime) against
+  live devnet Pyth prices; the real-money on-chain path is wired and gated behind "go live".
+publish_to: none
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── the real Throtl engine (path deps inside the workspace) ──
+  throtl_core:
+    path: ../packages/throtl_core
+  throtl_runtime:
+    path: ../packages/throtl_runtime
+  throtl_chain:
+    path: ../packages/throtl_chain
+  throtl_live:
+    path: ../packages/throtl_live
+  magicblock_client:
+    path: ../packages/magicblock_client
+  flash_client:
+    path: ../packages/flash_client
+
+  # ── ui / platform ──
+  provider: ^6.1.2 # DI for app-state controllers (theme, audio, wallet)
+  shared_preferences: ^2.3.2 # persist theme + sound across launches
+  flutter_soloud: ^3.1.10 # low-latency SFX + looping music + pitched engine hum (OGG via FFI)
+  http: ^1.2.2 # guardian read APIs (season / paddock / share / price)
+  model_viewer_plus: ^1.10.0 # live 3D garage turntable — auto-rotating GLB (the design's three.js, in a WebView)
+
+  # ── wallet / chain ──
+  solana: ^0.32.0 # RpcClient (balances), Ed25519HDPublicKey, ATA derivation
+  solana_mobile_client: ^0.1.2 # Mobile Wallet Adapter (Android); no package:solana dep → conflict-free
+  flutter_secure_storage: ^9.2.4 # MWA auth token persistence (encrypted)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^10.2.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/cars/side/
+    - assets/cars/3d/
+    - assets/track/
+    - assets/audio/
+  fonts:
+    - family: Lilita One
+      fonts:
+        - asset: assets/fonts/LilitaOne-Regular.ttf
+    - family: Baloo 2
+      fonts:
+        - asset: assets/fonts/Baloo2-Variable.ttf
