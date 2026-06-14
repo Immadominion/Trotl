@@ -194,6 +194,13 @@ class _FundsCardState extends State<_FundsCard> {
             'Wallet · ${wallet.usdcUi.toStringAsFixed(2)} USDC · ${wallet.solUi.toStringAsFixed(3)} SOL',
             style: bodyStyle(size: 12.5, color: p.ink, weight: FontWeight.w800),
           ),
+          if (wallet.networkError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '⚠ ${wallet.networkError}',
+              style: bodyStyle(size: 11, color: p.redDeep, weight: FontWeight.w800, height: 1.3),
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [

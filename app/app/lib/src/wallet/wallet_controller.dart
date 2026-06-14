@@ -29,6 +29,7 @@ class WalletController extends ChangeNotifier {
   String? _walletName;
   int _solLamports = 0;
   int _usdc6 = 0;
+  String? _netError;
   String? _error;
   bool _refreshing = false;
   Timer? _poll;
@@ -50,6 +51,11 @@ class WalletController extends ChangeNotifier {
   String? get error => _error;
   int get solLamports => _solLamports;
   int get usdc6 => _usdc6;
+
+  /// A user-facing network error from the last balance read (DNS/socket failure),
+  /// or null when the network is reachable. Shown so a dead connection isn't a
+  /// silent $0.
+  String? get networkError => _netError;
   double get solUi => _solLamports / 1e9;
   double get usdcUi => _usdc6 / 1e6;
 
@@ -150,8 +156,14 @@ class WalletController extends ChangeNotifier {
       try {
         final bal = await rpc.getBalance(o);
         _solLamports = bal.value;
+        _netError = null; // a good read clears any prior network error
       } on Object catch (e) {
         debugPrint('[wallet] SOL balance failed ($e)');
+        final s = '$e';
+        _netError = (s.contains('Failed host lookup') || s.contains('SocketException'))
+            ? "Can't reach the network. Check the device's internet, and set "
+                  'Private DNS → Off (Settings → Network → Private DNS).'
+            : 'RPC unreachable — try another endpoint.';
       }
       try {
         final ata = await findAssociatedTokenAddress(
