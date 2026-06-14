@@ -39,9 +39,20 @@ SignSubmitConfirm flashTradeSignSubmit(WalletController wallet, RpcClient flashE
     final owner = wallet.owner;
     if (owner == null) throw StateError('wallet disconnected');
     _assertOwnerSigner(tx.transactionBase64, owner);
-    // Decode and ensure SignedTx format with placeholder signatures for MWA
+    // Decode Flash tx and rebuild in proper MWA format (with Signature array)
     final decoded = SignedTx.decode(tx.transactionBase64);
-    final txBytes = decoded.toByteArray() as Uint8List;
+    final compiled = decoded.compiledMessage;
+
+    // Ensure proper Signature array structure (MWA requires this)
+    final requiredSigs = compiled.requiredSignatureCount;
+    final signatures = List<Signature>.generate(
+      requiredSigs,
+      (i) => Signature(List.filled(64, 0), publicKey: compiled.accountKeys[i]),
+    );
+
+    // Rebuild SignedTx in proper format for MWA
+    final properTx = SignedTx(compiledMessage: compiled, signatures: signatures);
+    final txBytes = Uint8List.fromList(properTx.toByteArray().toList());
     final signed = await wallet.signTransactions([txBytes]);
     return flashEr.sendTransaction(base64Encode(signed.first), skipPreflight: true);
   };
