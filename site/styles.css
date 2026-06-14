@@ -208,12 +208,15 @@ ul { list-style: none; }
   border: 2px solid var(--ink);
 }
 .plate__body {
+  display: inline-block;       /* form a real box: an inline span can't contain the block child below */
+  box-sizing: border-box;
   transform: skewX(-8deg);
   background: linear-gradient(180deg, var(--orange-lt), var(--orange) 60%);
   border: 3px solid var(--ink);
   border-radius: 12px;
   box-shadow: 0 4px 0 var(--ink);
   padding: 8px 24px 7px;
+  margin-top: 4px;             /* leave room for the kicker tab riding the top edge */
 }
 .plate__body > span {
   display: block;
