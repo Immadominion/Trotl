@@ -8,6 +8,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flash_client/flash_client.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -38,7 +39,10 @@ SignSubmitConfirm flashTradeSignSubmit(WalletController wallet, RpcClient flashE
     final owner = wallet.owner;
     if (owner == null) throw StateError('wallet disconnected');
     _assertOwnerSigner(tx.transactionBase64, owner);
-    final signed = await wallet.signTransactions([base64Decode(tx.transactionBase64)]);
+    // Decode and ensure SignedTx format with placeholder signatures for MWA
+    final decoded = SignedTx.decode(tx.transactionBase64);
+    final txBytes = decoded.toByteArray();
+    final signed = await wallet.signTransactions([Uint8List.fromList(txBytes)]);
     return flashEr.sendTransaction(base64Encode(signed.first), skipPreflight: true);
   };
 }
