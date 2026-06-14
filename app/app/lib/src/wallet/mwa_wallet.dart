@@ -94,7 +94,7 @@ class MwaWallet {
     if (!isAvailable) throw const MwaException('Wallet unavailable');
     final session = await LocalAssociationScenario.create();
     try {
-      session.startActivityForResult(null).ignore();
+      await session.startActivityForResult(null);
       final client = await session.start();
       await _ensureAuthorized(client, cluster);
       final result = await client.signAndSendTransactions(transactions: transactions);
@@ -119,7 +119,7 @@ class MwaWallet {
     if (!isAvailable) throw const MwaException('Wallet unavailable');
     final session = await LocalAssociationScenario.create();
     try {
-      session.startActivityForResult(null).ignore();
+      await session.startActivityForResult(null);
       final client = await session.start();
       await _ensureAuthorized(client, cluster);
       final result = await client.signTransactions(transactions: transactions);
