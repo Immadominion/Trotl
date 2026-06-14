@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:throtl/src/app.dart';
 import 'package:throtl/src/audio/sfx.dart';
@@ -14,6 +15,9 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  // Request permissions needed for Mobile Wallet Adapter (MWA) to sign transactions
+  await Permission.camera.request(); // MWA uses camera for QR code scanning
+  await Permission.internet.request(); // Network access for RPC calls
   final prefs = await SharedPreferences.getInstance();
   final theme = ThemeController(prefs);
   final wallet = WalletController();
