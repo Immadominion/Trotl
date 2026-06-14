@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:throtl/src/app.dart';
 import 'package:throtl/src/audio/sfx.dart';
@@ -15,12 +14,6 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  // Request network permissions for RPC calls + wallet balance fetches
-  await [
-    Permission.internet,
-    Permission.accessNetworkState,
-    Permission.changeNetworkState,
-  ].request();
   final prefs = await SharedPreferences.getInstance();
   final theme = ThemeController(prefs);
   final wallet = WalletController();
