@@ -10,7 +10,7 @@ import 'package:magicblock_client/magicblock_client.dart';
 /// network — there is no devnet path; not-connected = practice, connected = real.
 const String _rpcOverride = String.fromEnvironment('THROTL_RPC');
 const String kBaseRpc = _rpcOverride == ''
-    ? 'https://mainnet.helius-rpc.com/?api-key=65e62146-bb34-47a1-8567-60b2fbb70953'
+    ? 'https://karine-caqxkl-fast-mainnet.helius-rpc.com'
     : _rpcOverride;
 
 /// Which Solana cluster the app is pointed at. Mainnet is the only network now —
