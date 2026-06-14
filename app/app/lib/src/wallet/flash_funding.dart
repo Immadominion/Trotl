@@ -41,8 +41,8 @@ SignSubmitConfirm flashTradeSignSubmit(WalletController wallet, RpcClient flashE
     _assertOwnerSigner(tx.transactionBase64, owner);
     // Decode and ensure SignedTx format with placeholder signatures for MWA
     final decoded = SignedTx.decode(tx.transactionBase64);
-    final txBytes = decoded.toByteArray();
-    final signed = await wallet.signTransactions([Uint8List.fromList(txBytes)]);
+    final txBytes = Uint8List.fromList(decoded.toByteArray());
+    final signed = await wallet.signTransactions([txBytes]);
     return flashEr.sendTransaction(base64Encode(signed.first), skipPreflight: true);
   };
 }
