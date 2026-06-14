@@ -1,41 +1,58 @@
+import 'package:flutter/foundation.dart';
 import 'package:magicblock_client/magicblock_client.dart';
 import 'package:solana/solana.dart';
 
 /// L1 **mainnet** base RPC. A custom first-choice can be passed at build time:
 ///   flutter run --dart-define=THROTL_RPC=https://your-mainnet-rpc
-/// BUT some endpoints (e.g. Helius *dedicated* subdomains like `…-fast-mainnet`)
-/// don't resolve on every network — they fail DNS on Starlink/some carriers while
-/// the browser + `flashapi.trade` resolve fine. So the app PROBES the candidates
-/// below at startup ([resolveRpc]) and uses the first that actually resolves +
-/// responds — a dead endpoint self-heals across the whole app (balances, funding,
-/// ride), instead of every call dying with "Failed host lookup".
+///
+/// Hard-won lesson (Starlink + a Seeker): some DEVICES fail to resolve specific
+/// RPC *domains* — `helius-rpc.com` returns "Failed host lookup (errno=7)" while
+/// `flashapi.trade` and `solana-rpc.publicnode.com` (both Cloudflare too) resolve
+/// fine. It's the DOMAIN, not the network. And Dart's HttpClient can't be pointed
+/// at a pre-resolved IP for a Cloudflare host (TLS needs SNI, which the
+/// connection-factory API can't set by-IP) — so DoH-in-app is out. The robust fix
+/// is to default to domains that resolve broadly and let the user inject their own
+/// fast endpoint (e.g. a Helius key) via --dart-define when their network resolves
+/// it. The app PROBES the list at startup ([resolveRpc]) and pins the first that
+/// actually responds, so a dead/blocked endpoint self-heals across the whole app.
+///
+/// To get a *fast* endpoint when your device won't resolve Helius: set Android
+/// Private DNS (Settings → Network → Private DNS) to `one.one.one.one`, then pass
+/// `--dart-define=THROTL_RPC=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY`.
 const String _rpcOverride = String.fromEnvironment('THROTL_RPC');
 
-/// Tried in order; the override (if any) first, then well-propagated endpoints that
-/// resolve everywhere.
+/// Tried in order: the override (if any) first, then broadly-resolvable public
+/// mainnet endpoints. NOT Helius by default — its domain is the one that fails to
+/// resolve on the target device (inject it via THROTL_RPC if your network has it).
 const List<String> kRpcCandidates = [
   if (_rpcOverride != '') _rpcOverride,
-  'https://mainnet.helius-rpc.com/?api-key=65e62146-bb34-47a1-8567-60b2fbb70953',
   'https://solana-rpc.publicnode.com',
   'https://api.mainnet-beta.solana.com',
+  'https://solana.drpc.org',
 ];
 
 /// The RPC the whole app uses (set by [resolveRpc]; starts as the first candidate).
 String _activeRpc = kRpcCandidates.first;
 
+/// The active base RPC URL (for diagnostics / display).
+String get activeRpc => _activeRpc;
+
 /// Probe each candidate once at startup; switch the active RPC to the first that
 /// resolves + responds. Cheap (`getLatestBlockhash`); a non-resolving host fails
-/// fast (~200ms) so the whole probe is ~1s worst case.
+/// fast (~200ms) so the whole probe is ~1s worst case. Logs the winner so a bad
+/// endpoint is visible in logcat instead of silently wedging every chain call.
 Future<void> resolveRpc() async {
   for (final url in kRpcCandidates) {
     try {
       await RpcClient(url).getLatestBlockhash();
       _activeRpc = url;
+      debugPrint('[rpc] active endpoint: $url');
       return;
-    } on Object {
-      // unresolvable / unreachable / rate-limited — try the next
+    } on Object catch (e) {
+      debugPrint('[rpc] candidate unusable ($url): $e');
     }
   }
+  debugPrint('[rpc] WARNING: no candidate responded — using ${kRpcCandidates.first}');
 }
 
 /// Which Solana cluster the app is pointed at. Mainnet is the only network now —

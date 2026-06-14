@@ -204,24 +204,33 @@ Future<void> flashWithdraw(
   }
 }
 
-/// Owner-sign + submit a base-chain Flash tx via MWA, then confirm.
+/// Owner-**sign** a base-chain Flash tx via MWA and submit it OURSELVES (never
+/// signAndSend — that lets the wallet simulate against its own RPC and fail with
+/// "Simulation failed, can't predict balance changes"). Then confirm.
 Future<void> _ownerTx(WalletController wallet, RpcClient base, BuiltTx tx, String owner) async {
   _assertOwnerSigner(tx.transactionBase64, owner);
-  final sigs = await wallet.signAndSend([base64Decode(tx.transactionBase64)]);
+  final sigs = await wallet.signAndSubmit([base64Decode(tx.transactionBase64)], base);
   await _confirm(base, sigs.first);
 }
 
 Future<void> _confirm(RpcClient rpc, String sig) async {
   final stop = DateTime.now().add(const Duration(seconds: 90));
   while (DateTime.now().isBefore(stop)) {
-    final st = await rpc.getSignatureStatuses([sig], searchTransactionHistory: true);
-    final s = st.value.isEmpty ? null : st.value.first;
-    if (s != null) {
-      if (s.err != null) throw StateError('Flash tx failed: ${s.err}');
-      if (s.confirmationStatus == ConfirmationStatus.confirmed ||
-          s.confirmationStatus == ConfirmationStatus.finalized) {
-        return;
+    try {
+      final st = await rpc.getSignatureStatuses([sig], searchTransactionHistory: true);
+      final s = st.value.isEmpty ? null : st.value.first;
+      if (s != null) {
+        if (s.err != null) throw StateError('Flash tx failed: ${s.err}');
+        if (s.confirmationStatus == ConfirmationStatus.confirmed ||
+            s.confirmationStatus == ConfirmationStatus.finalized) {
+          return;
+        }
       }
+    } on Exception {
+      // transient RPC/DNS blip during the MWA resume-race — keep polling; the tx
+      // was already submitted, so it'll show up once the network re-binds. (A real
+      // on-chain failure throws StateError, an Error not an Exception, so it
+      // propagates out of the loop and is not swallowed here.)
     }
     await Future<void>.delayed(const Duration(milliseconds: 800));
   }

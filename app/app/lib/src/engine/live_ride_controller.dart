@@ -299,7 +299,8 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
         feePayer: owner,
       );
       _setArm('Confirm in your wallet — this opens your ride session on-chain.');
-      final sigs = await wallet.signAndSend([unsignedTx]);
+      // Sign-only via MWA + submit ourselves (no wallet simulation against its own RPC).
+      final sigs = await wallet.signAndSubmit([unsignedTx], base);
       _setArm('Confirming on Solana…');
       await _confirm(base, sigs.first);
 
@@ -393,7 +394,7 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
       recentBlockhash: bh.blockhash,
       feePayer: owner,
     );
-    final sigs = await wallet.signAndSend([unsigned]);
+    final sigs = await wallet.signAndSubmit([unsigned], base);
     await _confirm(base, sigs.first);
 
     final token = await sessionTokenV2Pda(sessionSigner: flashSession.publicKey, authority: owner);
@@ -583,7 +584,7 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
         recentBlockhash: bh.blockhash,
         feePayer: owner,
       );
-      final sigs = await wallet.signAndSend([unsigned]);
+      final sigs = await wallet.signAndSubmit([unsigned], base);
       await _confirm(base, sigs.first);
       // The rent was reclaimed by this close — drop any stale pending entry.
       unawaited(RentReclaimStore.remove(ride.toBase58()));

@@ -1,14 +1,14 @@
 {
   "newLeverage": "2.00",
-  "newEntryPrice": "73.85",
-  "newLiquidationPrice": "44.38",
+  "newEntryPrice": "74.16",
+  "newLiquidationPrice": "44.56",
   "entryFee": "0.00",
   "entryFeeBeforeDiscount": "0.00",
   "openPositionFeePercent": "0.02000",
-  "availableLiquidity": "60179.55",
+  "availableLiquidity": "75326.78",
   "youPayUsdUi": "10.99",
   "youRecieveUsdUi": "21.97",
-  "marginFeePercentage": "0.00094",
-  "outputAmount": "297552867",
-  "outputAmountUi": "0.2975"
+  "marginFeePercentage": "0.00068",
+  "outputAmount": "296321842",
+  "outputAmountUi": "0.2963"
 }

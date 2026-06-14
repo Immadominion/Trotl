@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flash_client/flash_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:solana/solana.dart';
 import 'package:throtl/src/chain/network.dart';
@@ -144,6 +146,7 @@ class WalletController extends ChangeNotifier {
   }
 
   /// Read live SOL + USDC balances for the owner on the active cluster.
+  /// For Flash trades, reads the Flash basket balance instead of wallet USDC.
   Future<void> refreshBalances() async {
     final o = _owner;
     if (o == null) return;
@@ -151,11 +154,44 @@ class WalletController extends ChangeNotifier {
     _refreshing = true;
     notifyListeners();
     final cfg = network;
-    final rpc = RpcClient(cfg.baseRpc);
+    var rpc = RpcClient(cfg.baseRpc);
     try {
       try {
-        final bal = await rpc.getBalance(o);
-        _solLamports = bal.value;
+        // This device's DNS is INTERMITTENT (Starlink): the same RPC domain that
+        // resolves when a tx goes through throws "Failed host lookup (errno=7)"
+        // moments later. So retry through the flap — DNS/socket failures AND RPC
+        // overload (504/-32504/429) — re-probing to a candidate that resolves
+        // *now* after the first couple of misses.
+        int? lamports;
+        Object? lastErr;
+        for (var attempt = 0; attempt < 5; attempt++) {
+          try {
+            lamports = (await rpc.getBalance(o)).value;
+            break;
+          } on Object catch (e) {
+            lastErr = e;
+            final s = '$e';
+            final transient = s.contains('Failed host lookup') ||
+                s.contains('No address associated') ||
+                s.contains('SocketException') ||
+                s.contains('Connection closed') ||
+                s.contains('Connection reset') ||
+                s.contains('-32504') ||
+                s.contains('504') ||
+                s.contains('429') ||
+                s.contains('timed out') ||
+                s.contains('TimeoutException');
+            if (!transient) rethrow;
+            if (attempt >= 1) {
+              await resolveRpc(); // switch to a candidate that resolves now
+              rpc = RpcClient(network.baseRpc);
+            }
+            await Future<void>.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+          }
+        }
+        // ignore: only_throw_errors — re-surface the RPC's own error to the handler below
+        if (lamports == null) throw lastErr ?? StateError('balance unavailable');
+        _solLamports = lamports;
         _netError = null; // a good read clears any prior network error
       } on Object catch (e) {
         debugPrint('[wallet] SOL balance failed ($e)');
@@ -163,9 +199,30 @@ class WalletController extends ChangeNotifier {
         _netError = (s.contains('Failed host lookup') || s.contains('SocketException'))
             ? "Can't reach the network. Check the device's internet, and set "
                   'Private DNS → Off (Settings → Network → Private DNS).'
-            : 'RPC unreachable — try another endpoint.';
+            : (s.contains('-32504') || s.contains('504') || s.contains('429') || s.contains('timed out'))
+                ? 'RPC overloaded (timed out). Set your own endpoint: run with '
+                      '--dart-define=THROTL_RPC=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY'
+                : 'RPC unreachable — try another endpoint.';
       }
       try {
+        // For Flash trades, read the Flash basket balance (after funding)
+        // Falls back to wallet USDC if no basket yet
+        try {
+          final api = FlashApi();
+          final state = await api.ownerState(o);
+          final basketPubkey = state['basketPubkey'] as String?;
+          if (basketPubkey != null && basketPubkey.isNotEmpty) {
+            final raw = await api.withdrawableRaw(basketPubkey, 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+            _usdc6 = raw;
+            api.close();
+            return; // use Flash basket balance, skip wallet USDC read
+          }
+          api.close();
+        } on Object {
+          // Fall through to wallet USDC if Flash read fails
+        }
+
+        // Fallback: read wallet USDC token account
         final ata = await findAssociatedTokenAddress(
           owner: Ed25519HDPublicKey.fromBase58(o),
           mint: Ed25519HDPublicKey.fromBase58(cfg.usdcMint),
@@ -198,4 +255,59 @@ class WalletController extends ChangeNotifier {
   /// Owner-signs txs without broadcasting (app submits).
   Future<List<Uint8List>> signTransactions(List<Uint8List> txs) =>
       _mwa.signTransactions(txs, cluster: network.mwaCluster);
+
+  /// The robust money path: owner-**sign only** via MWA (no wallet
+  /// simulate/submit — so no flaky "Simulation failed, can't predict balance
+  /// changes"), then submit to [rpc] ourselves and return the signatures. The tx
+  /// goes to the RIGHT RPC and WE see the real on-chain error (the wallet hides
+  /// it). Matches the proven sol_new / Flash-trade signing pattern.
+  Future<List<String>> signAndSubmit(
+    List<Uint8List> txs,
+    RpcClient rpc, {
+    bool skipPreflight = false,
+  }) async {
+    final signed = await _mwa.signTransactions(txs, cluster: network.mwaCluster);
+    final sigs = <String>[];
+    for (final s in signed) {
+      sigs.add(await _submitWithRetry(rpc, base64Encode(s), skipPreflight));
+    }
+    return sigs;
+  }
+
+  /// Broadcast a signed tx, surviving the **MWA resume-race**: the wallet
+  /// round-trip backgrounds us, and on resume Android often hasn't re-bound the
+  /// app's network yet, so the very first `getaddrinfo` throws "Failed host
+  /// lookup … (errno = 7)" even though the device is online. The signed payload
+  /// never left the device, so a re-send can't double-submit — we retry on
+  /// DNS/socket/timeout failures (rotating to a healthier RPC) until the network
+  /// settles. A real on-chain rejection (which means the tx *did* reach the RPC)
+  /// is re-thrown immediately.
+  Future<String> _submitWithRetry(RpcClient rpc, String b64, bool skipPreflight) async {
+    var client = rpc;
+    Object? lastErr;
+    for (var attempt = 0; attempt < 6; attempt++) {
+      try {
+        return await client.sendTransaction(b64, skipPreflight: skipPreflight);
+      } on Object catch (e) {
+        lastErr = e;
+        final s = '$e';
+        final retriable = s.contains('Failed host lookup') ||
+            s.contains('No address associated') ||
+            s.contains('SocketException') ||
+            s.contains('Connection closed') ||
+            s.contains('Connection reset') ||
+            s.contains('-32504') ||
+            s.contains('504') ||
+            s.contains('429') ||
+            s.contains('timed out') ||
+            s.contains('TimeoutException');
+        if (!retriable) rethrow; // reached the RPC → it's a real error, surface it
+        await resolveRpc(); // re-probe; switch to a candidate that resolves now
+        client = RpcClient(network.baseRpc);
+        await Future<void>.delayed(Duration(milliseconds: 700 * (attempt + 1)));
+      }
+    }
+    // ignore: only_throw_errors — re-surface the RPC's own network error
+    throw lastErr ?? StateError('transaction submit failed');
+  }
 }

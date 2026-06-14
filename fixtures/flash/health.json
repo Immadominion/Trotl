@@ -1,21 +1,21 @@
 {
   "accounts": {
-    "baskets": 763,
+    "baskets": 779,
     "custodies": 47,
-    "deposit_ledgers": 106,
+    "deposit_ledgers": 142,
     "markets": 92,
     "pools": 1
   },
   "config": {
     "branch": "main",
     "env": "dev",
-    "loadedAtUnix": 1781282905,
+    "loadedAtUnix": 1781464070,
     "markets": 92,
     "pools": 1,
-    "publishedAt": "2026-06-12T16:21:59Z",
+    "publishedAt": "2026-06-14T19:07:40Z",
     "source": "cdn",
     "tokens": 47,
-    "version": "2a91067b255514e291eea47058752975934062cf"
+    "version": "99d7d2cddb7775afc75218c796b3aff413794ecf"
   },
   "program": "magicblock",
   "status": "ok"

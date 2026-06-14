@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Throtl — Race the chart. The first analog exchange.</title>
-  <meta name="description" content="Throtl turns a perp trade into a thumb on a throttle. Your live exposure follows your finger at ~30ms on a MagicBlock Ephemeral Rollup, mirrors into real, self-custodied Flash Trade positions, and is watched by a keyless guardian. Race the chart." />
+  <meta name="description"
+    content="Throtl turns a perp trade into a thumb on a throttle. Your live exposure follows your finger at ~30ms on a MagicBlock Ephemeral Rollup, mirrors into real, self-custodied Flash Trade positions, and is watched by a keyless guardian. Race the chart." />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Throtl — Race the chart" />
-  <meta property="og:description" content="The first analog exchange. Hold the market in your hand — a chunky cartoon racing game on a real, self-custodied perp engine. Solana mainnet + devnet." />
+  <meta property="og:description"
+    content="The first analog exchange. Hold the market in your hand — a chunky cartoon racing game on a real, self-custodied perp engine. Solana mainnet + devnet." />
   <meta property="og:url" content="https://throtl.fun" />
   <meta name="theme-color" content="#23203A" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -22,6 +25,7 @@
   <link rel="preload" href="assets/fonts/Baloo2-Variable.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <!-- backdrop -->
   <div class="sky"></div>
@@ -34,7 +38,8 @@
       <a class="brand" href="#top" aria-label="Throtl home">
         <span class="brand__mark" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#fff" stroke="#23203A" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#fff" stroke="#23203A" stroke-width="1.6"
+              stroke-linejoin="round" />
           </svg>
         </span>
         <span class="brand__name">Throtl</span>
@@ -50,7 +55,9 @@
       <div class="nav__cta">
         <a class="btn btn--green js-burger-cta" data-cta href="#play">PLAY NOW ▸</a>
         <button class="nav__burger" id="burger" aria-label="Toggle menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="#FFF8EC" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="#FFF8EC" stroke-width="2.6" stroke-linecap="round" />
+          </svg>
         </button>
       </div>
     </nav>
@@ -79,19 +86,29 @@
             <span class="t-label">Live & wired on</span>
             <div class="chip-stack">
               <span class="chip">
-                <svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#14F195" stroke="#23203A" stroke-width="2"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" fill="#14F195" stroke="#23203A" stroke-width="2" />
+                </svg>
                 Solana mainnet + devnet
               </span>
               <span class="chip">
-                <svg width="15" height="15" viewBox="0 0 24 24"><path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#FFC421" stroke="#23203A" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24">
+                  <path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#FFC421" stroke="#23203A" stroke-width="1.5"
+                    stroke-linejoin="round" />
+                </svg>
                 MagicBlock ER
               </span>
               <span class="chip">
-                <svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 3 L20 7 V12 C20 17 16.5 20.3 12 21.5 C7.5 20.3 4 17 4 12 V7 Z" fill="#4FD9FF" stroke="#23203A" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24">
+                  <path d="M12 3 L20 7 V12 C20 17 16.5 20.3 12 21.5 C7.5 20.3 4 17 4 12 V7 Z" fill="#4FD9FF"
+                    stroke="#23203A" stroke-width="1.8" stroke-linejoin="round" />
+                </svg>
                 Flash Trade
               </span>
               <span class="chip">
-                <svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#A06CF8" stroke="#23203A" stroke-width="2"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" fill="#A06CF8" stroke="#23203A" stroke-width="2" />
+                </svg>
                 Pyth oracle
               </span>
             </div>
@@ -102,7 +119,10 @@
         <div class="hero__stage">
           <div class="float float--badge"><span class="dot"></span>LIVE RIDE</div>
           <img class="float float--flag" src="assets/track/flagCheckers.png" alt="" />
-          <div class="float float--chip-card"><div class="l">FUEL · 20× LEV</div><div class="v">◎ 1.40 SOL</div></div>
+          <div class="float float--chip-card">
+            <div class="l">FUEL · 20× LEV</div>
+            <div class="v">◎ 1.40 SOL</div>
+          </div>
 
           <div class="phone" id="phone">
             <div class="phone__notch"></div>
@@ -121,22 +141,23 @@
                 <svg viewBox="0 0 280 320" preserveAspectRatio="none" aria-hidden="true">
                   <defs>
                     <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="#71D63C" stop-opacity="0.55"/>
-                      <stop offset="100%" stop-color="#71D63C" stop-opacity="0"/>
+                      <stop offset="0%" stop-color="#71D63C" stop-opacity="0.55" />
+                      <stop offset="100%" stop-color="#71D63C" stop-opacity="0" />
                     </linearGradient>
                   </defs>
                   <!-- grid -->
                   <g stroke="rgba(255,255,255,0.12)" stroke-width="1.5">
-                    <line x1="0" y1="80" x2="280" y2="80"/>
-                    <line x1="0" y1="160" x2="280" y2="160"/>
-                    <line x1="0" y1="240" x2="280" y2="240"/>
+                    <line x1="0" y1="80" x2="280" y2="80" />
+                    <line x1="0" y1="160" x2="280" y2="160" />
+                    <line x1="0" y1="240" x2="280" y2="240" />
                   </g>
                   <!-- area under the price line -->
-                  <path d="M0,250 L40,238 L80,255 L120,210 L160,225 L200,150 L240,120 L280,72 L280,320 L0,320 Z" fill="url(#fill)"/>
+                  <path d="M0,250 L40,238 L80,255 L120,210 L160,225 L200,150 L240,120 L280,72 L280,320 L0,320 Z"
+                    fill="url(#fill)" />
                   <!-- price line -->
-                  <path d="M0,250 L40,238 L80,255 L120,210 L160,225 L200,150 L240,120 L280,72"
-                        fill="none" stroke="#FFF8EC" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-                  <circle cx="280" cy="72" r="6" fill="#FFC421" stroke="#23203A" stroke-width="2.5"/>
+                  <path d="M0,250 L40,238 L80,255 L120,210 L160,225 L200,150 L240,120 L280,72" fill="none"
+                    stroke="#FFF8EC" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+                  <circle cx="280" cy="72" r="6" fill="#FFC421" stroke="#23203A" stroke-width="2.5" />
                 </svg>
                 <div class="speedlines" id="speedlines"></div>
                 <img class="chart__car" src="assets/cars/race.png" alt="Race car climbing the price line" />
@@ -183,56 +204,84 @@
             </span>
             <h2 class="reveal d1">A toy on top.<br>A real exchange underneath.</h2>
             <p class="reveal d2">The cartoon racing game is the cockpit. Every ride drives the same reconciler and
-            accounting that runs real money — bounded, cross-checked, and self-custodied.</p>
+              accounting that runs real money — bounded, cross-checked, and self-custodied.</p>
           </div>
 
           <div class="features">
             <article class="feature reveal">
               <div class="feature__icon ic-orange">
-                <svg width="28" height="28" viewBox="0 0 24 24"><path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#fff" stroke="#23203A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24">
+                  <path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#fff" stroke="#23203A" stroke-width="1.6"
+                    stroke-linejoin="round" />
+                </svg>
               </div>
               <h3>Thumb on a throttle</h3>
-              <p>Press and your position grows; let go and it eases off. The throttle <i>is</i> your size — leverage you can feel.</p>
+              <p>Press and your position grows; let go and it eases off. The throttle <i>is</i> your size — leverage you
+                can feel.</p>
             </article>
 
             <article class="feature reveal d1">
               <div class="feature__icon ic-cyan">
-                <svg width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#fff" stroke="#23203A" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="#23203A" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" fill="#fff" stroke="#23203A" stroke-width="1.8" />
+                  <path d="M12 7v5l3.5 2" stroke="#23203A" stroke-width="2" stroke-linecap="round" />
+                </svg>
               </div>
               <h3>~30 ms on an ER</h3>
-              <p>Gasless, session-signed ticks on a MagicBlock Ephemeral Rollup, marked against an in-rollup Pyth Lazer oracle.</p>
+              <p>Gasless, session-signed ticks on a MagicBlock Ephemeral Rollup, marked against an in-rollup Pyth Lazer
+                oracle.</p>
             </article>
 
             <article class="feature reveal d2">
               <div class="feature__icon ic-green">
-                <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 3 L20 7 V12 C20 17 16.5 20.3 12 21.5 C7.5 20.3 4 17 4 12 V7 Z" fill="#fff" stroke="#23203A" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.5 12l2.5 2.5 4.5-5" stroke="#23203A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24">
+                  <path d="M12 3 L20 7 V12 C20 17 16.5 20.3 12 21.5 C7.5 20.3 4 17 4 12 V7 Z" fill="#fff"
+                    stroke="#23203A" stroke-width="1.8" stroke-linejoin="round" />
+                  <path d="M8.5 12l2.5 2.5 4.5-5" stroke="#23203A" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
               </div>
               <h3>Real, self-custodied</h3>
-              <p>A bounded reconciler mirrors your ride into real Flash Trade positions — keys never leave your phone.</p>
+              <p>A bounded reconciler mirrors your ride into real Flash Trade positions — keys never leave your phone.
+              </p>
             </article>
 
             <article class="feature reveal">
               <div class="feature__icon ic-purple">
-                <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2 L4 5v6c0 5 3.5 8.5 8 10.5C16.5 19.5 20 16 20 11V5z" fill="#fff" stroke="#23203A" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24">
+                  <path d="M12 2 L4 5v6c0 5 3.5 8.5 8 10.5C16.5 19.5 20 16 20 11V5z" fill="#fff" stroke="#23203A"
+                    stroke-width="1.8" stroke-linejoin="round" />
+                </svg>
               </div>
               <h3>Keyless guardian</h3>
-              <p>An off-phone watcher holds zero keys. It can only fire your own pre-signed flatten if the loss floor is hit.</p>
+              <p>An off-phone watcher holds zero keys. It can only fire your own pre-signed flatten if the loss floor is
+                hit.</p>
             </article>
 
             <article class="feature reveal d1">
               <div class="feature__icon ic-red">
-                <svg width="28" height="28" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="#fff" stroke="#23203A" stroke-width="1.8"/><path d="M8 14l3-4 2 2.5L16 9" stroke="#23203A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24">
+                  <rect x="4" y="4" width="16" height="16" rx="4" fill="#fff" stroke="#23203A" stroke-width="1.8" />
+                  <path d="M8 14l3-4 2 2.5L16 9" stroke="#23203A" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
               </div>
               <h3>Hard bounds, always</h3>
-              <p>Fuel × leverage, an independent Pyth cross-check, a per-action cap, and a floor-derived stop on every ride.</p>
+              <p>Fuel × leverage, an independent Pyth cross-check, a per-action cap, and a floor-derived stop on every
+                ride.</p>
             </article>
 
             <article class="feature reveal d2">
               <div class="feature__icon ic-yellow">
-                <svg width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#fff" stroke="#23203A" stroke-width="1.8"/><path d="M12 8.5v7M9.8 10h3.4M9.8 14h3.4" stroke="#23203A" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" fill="#fff" stroke="#23203A" stroke-width="1.8" />
+                  <path d="M12 8.5v7M9.8 10h3.4M9.8 14h3.4" stroke="#23203A" stroke-width="1.8"
+                    stroke-linecap="round" />
+                </svg>
               </div>
               <h3>The chain can't trade you</h3>
-              <p>Rollup state is advisory only. Real money stays bounded and self-custodied — the chain can never directly authorize a trade.</p>
+              <p>Rollup state is advisory only. Real money stays bounded and self-custodied — the chain can never
+                directly authorize a trade.</p>
             </article>
           </div>
         </div>
@@ -246,7 +295,7 @@
           <span class="kicker reveal">▸ Five taps to the grid</span>
           <h2 class="reveal d1">How you race</h2>
           <p class="reveal d2">Connect, pick your ride, and hold the throttle. The whole flow lives on one phone —
-          and your real session stats carry all the way to the finish line.</p>
+            and your real session stats carry all the way to the finish line.</p>
         </div>
 
         <div class="steps">
@@ -289,43 +338,55 @@
           </span>
           <h2 class="reveal d1">A garage full of chart-killers</h2>
           <p class="reveal d2">Real 3D Kenney cars on a live turntable, each with its own handling. Then dress the whole
-          app in a Solana-ecosystem brand kit.</p>
+            app in a Solana-ecosystem brand kit.</p>
         </div>
 
         <div class="garage__cars">
           <article class="car-card reveal">
             <img class="car-card__img" src="assets/cars/race.png" alt="Race-1 car" />
-            <div class="car-card__row"><span class="car-card__name">Race-1</span><span class="car-card__tag">SIGNATURE</span></div>
+            <div class="car-card__row"><span class="car-card__name">Race-1</span><span
+                class="car-card__tag">SIGNATURE</span></div>
           </article>
           <article class="car-card reveal d1">
             <img class="car-card__img" src="assets/cars/race-future.png" alt="Phantom GT car" />
-            <div class="car-card__row"><span class="car-card__name">Phantom GT</span><span class="car-card__tag">TOP SPEED</span></div>
+            <div class="car-card__row"><span class="car-card__name">Phantom GT</span><span class="car-card__tag">TOP
+                SPEED</span></div>
           </article>
           <article class="car-card reveal d2">
             <img class="car-card__img" src="assets/cars/hatchback-sports.png" alt="Street Spec car" />
-            <div class="car-card__row"><span class="car-card__name">Street Spec</span><span class="car-card__tag">BALANCED</span></div>
+            <div class="car-card__row"><span class="car-card__name">Street Spec</span><span
+                class="car-card__tag">BALANCED</span></div>
           </article>
           <article class="car-card reveal">
             <img class="car-card__img" src="assets/cars/police.png" alt="Interceptor car" />
-            <div class="car-card__row"><span class="car-card__name">Interceptor</span><span class="car-card__tag">GRIP</span></div>
+            <div class="car-card__row"><span class="car-card__name">Interceptor</span><span
+                class="car-card__tag">GRIP</span></div>
           </article>
           <article class="car-card reveal d1">
             <img class="car-card__img" src="assets/cars/kart-oobi.png" alt="Pit Kart" />
-            <div class="car-card__row"><span class="car-card__name">Pit Kart</span><span class="car-card__tag">NIMBLE</span></div>
+            <div class="car-card__row"><span class="car-card__name">Pit Kart</span><span
+                class="car-card__tag">NIMBLE</span></div>
           </article>
           <article class="car-card reveal d2">
             <img class="car-card__img" src="assets/cars/suv.png" alt="Trailhead SUV" />
-            <div class="car-card__row"><span class="car-card__name">Trailhead</span><span class="car-card__tag">HEAVY</span></div>
+            <div class="car-card__row"><span class="car-card__name">Trailhead</span><span
+                class="car-card__tag">HEAVY</span></div>
           </article>
         </div>
 
         <div class="themes reveal d2">
-          <span class="theme-chip"><span class="sw" style="background:linear-gradient(180deg,#3E8BFF,#2049C9)"></span>Arcade</span>
-          <span class="theme-chip"><span class="sw" style="background:linear-gradient(180deg,#1C8FB0,#0E2230)"></span>Jupiter</span>
-          <span class="theme-chip"><span class="sw" style="background:linear-gradient(180deg,#FFB838,#FC8E03)"></span>BONK</span>
-          <span class="theme-chip"><span class="sw" style="background:linear-gradient(180deg,#1F8A4D,#0E3A23)"></span>MonkeDAO</span>
-          <span class="theme-chip"><span class="sw" style="background:linear-gradient(180deg,#2A2622,#121010)"></span>Mad Lads</span>
-          <span class="theme-chip"><span class="sw" style="background:linear-gradient(180deg,#FFB23E,#5B2A8C)"></span>Solflare</span>
+          <span class="theme-chip"><span class="sw"
+              style="background:linear-gradient(180deg,#3E8BFF,#2049C9)"></span>Arcade</span>
+          <span class="theme-chip"><span class="sw"
+              style="background:linear-gradient(180deg,#1C8FB0,#0E2230)"></span>Jupiter</span>
+          <span class="theme-chip"><span class="sw"
+              style="background:linear-gradient(180deg,#FFB838,#FC8E03)"></span>BONK</span>
+          <span class="theme-chip"><span class="sw"
+              style="background:linear-gradient(180deg,#1F8A4D,#0E3A23)"></span>MonkeDAO</span>
+          <span class="theme-chip"><span class="sw"
+              style="background:linear-gradient(180deg,#2A2622,#121010)"></span>Mad Lads</span>
+          <span class="theme-chip"><span class="sw"
+              style="background:linear-gradient(180deg,#FFB23E,#5B2A8C)"></span>Solflare</span>
         </div>
       </div>
     </section>
@@ -341,10 +402,22 @@
 
           <div class="proof">
             <div class="proof__stats">
-              <div class="stat reveal"><div class="stat__num">72<small> KB</small></div><div class="stat__label">Zero-dependency Pinocchio program</div></div>
-              <div class="stat reveal d1"><div class="stat__num">~0.50<small> SOL</small></div><div class="stat__label">Total rent to deploy</div></div>
-              <div class="stat reveal d2"><div class="stat__num">2<small> chains</small></div><div class="stat__label">mainnet-beta + devnet, same id</div></div>
-              <div class="stat reveal d3"><div class="stat__num">100%<small></small></div><div class="stat__label">On-chain bytes sha256 == audited binary</div></div>
+              <div class="stat reveal">
+                <div class="stat__num">72<small> KB</small></div>
+                <div class="stat__label">Zero-dependency Pinocchio program</div>
+              </div>
+              <div class="stat reveal d1">
+                <div class="stat__num">~0.50<small> SOL</small></div>
+                <div class="stat__label">Total rent to deploy</div>
+              </div>
+              <div class="stat reveal d2">
+                <div class="stat__num">2<small> chains</small></div>
+                <div class="stat__label">mainnet-beta + devnet, same id</div>
+              </div>
+              <div class="stat reveal d3">
+                <div class="stat__num">100%<small></small></div>
+                <div class="stat__label">On-chain bytes sha256 == audited binary</div>
+              </div>
             </div>
 
             <div class="proof__card card reveal d2">
@@ -354,9 +427,18 @@
                 <button id="copyBtn" data-copy="YSaqfuc753DkHZoaEvdNMSTQTf4hEuTtP65hszuvJy9">COPY</button>
               </div>
               <ul class="proof__list">
-                <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24"><path d="M5 13l4 4 10-11" stroke="#23203A" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Keyless guardian live on Railway, watching the loss floor.</li>
-                <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24"><path d="M5 13l4 4 10-11" stroke="#23203A" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Full lifecycle proven: program → ER → oracle → WS → reconciler → Flash.</li>
-                <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24"><path d="M5 13l4 4 10-11" stroke="#23203A" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Real-money path wired and gated behind an explicit "go live".</li>
+                <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24">
+                      <path d="M5 13l4 4 10-11" stroke="#23203A" stroke-width="3" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg></span>Keyless guardian live on Railway, watching the loss floor.</li>
+                <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24">
+                      <path d="M5 13l4 4 10-11" stroke="#23203A" stroke-width="3" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg></span>Full lifecycle proven: program → ER → oracle → WS → reconciler → Flash.</li>
+                <li><span class="tick"><svg width="12" height="12" viewBox="0 0 24 24">
+                      <path d="M5 13l4 4 10-11" stroke="#23203A" stroke-width="3" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg></span>Real-money path wired and gated behind an explicit "go live".</li>
               </ul>
             </div>
           </div>
@@ -367,14 +449,16 @@
     <!-- ================= FINAL CTA ================= -->
     <section class="finale" id="play">
       <div class="finale__flag"></div>
-      <div class="blob blob--yellow" style="width:360px;height:360px;top:0;left:50%;transform:translateX(-50%);opacity:0.4;"></div>
+      <div class="blob blob--yellow"
+        style="width:360px;height:360px;top:0;left:50%;transform:translateX(-50%);opacity:0.4;"></div>
       <div class="wrap">
         <h2 class="reveal">Hold the market<br>in your <em>hand.</em></h2>
         <p class="reveal d1">Connect a wallet, pick a car, and race the chart. The practice ride is free —
-        the real-money path is one explicit toggle away.</p>
+          the real-money path is one explicit toggle away.</p>
         <div class="finale__actions reveal d2">
           <a class="btn btn--big btn--green" data-cta href="#play">▶&nbsp;&nbsp;LAUNCH THE GAME</a>
-          <a class="btn btn--big btn--ghost" href="https://github.com/throtl" target="_blank" rel="noopener">VIEW THE SOURCE</a>
+          <a class="btn btn--big btn--ghost" href="https://github.com/Immadominion/Trotl" target="_blank"
+            rel="noopener">VIEW THE SOURCE</a>
         </div>
         <p class="finale__note reveal d3">Best on a phone in a Chromium browser · Solana mainnet + devnet</p>
       </div>
@@ -388,7 +472,10 @@
         <div>
           <a class="brand" href="#top">
             <span class="brand__mark" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#fff" stroke="#23203A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2 L5 14 H11 L9 22 L19 9 H12.5 L13 2 Z" fill="#fff" stroke="#23203A" stroke-width="1.6"
+                  stroke-linejoin="round" />
+              </svg>
             </span>
             <span class="brand__name">Throtl</span>
           </a>
@@ -410,7 +497,7 @@
           </div>
           <div class="footer__col">
             <h4>More</h4>
-            <a href="https://github.com/throtl" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/Immadominion/Trotl" target="_blank" rel="noopener">GitHub</a>
             <a href="https://pyth.network" target="_blank" rel="noopener">Pyth Network</a>
             <a href="https://solana.com" target="_blank" rel="noopener">Solana</a>
           </div>
@@ -425,4 +512,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>
