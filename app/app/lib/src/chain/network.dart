@@ -1,17 +1,42 @@
 import 'package:magicblock_client/magicblock_client.dart';
+import 'package:solana/solana.dart';
 
-/// L1 **mainnet** base RPC. The public `api.mainnet-beta.solana.com` is heavily
-/// rate-limited — drop in a dedicated **MAINNET** endpoint (Helius / Triton …)
-/// without touching code (use your mainnet URL, NOT devnet):
-///
-///   flutter run --dart-define=THROTL_RPC=https://your-id-fast-mainnet.helius-rpc.com
-///
-/// Empty (the default) falls back to the public mainnet endpoint. This is the only
-/// network — there is no devnet path; not-connected = practice, connected = real.
+/// L1 **mainnet** base RPC. A custom first-choice can be passed at build time:
+///   flutter run --dart-define=THROTL_RPC=https://your-mainnet-rpc
+/// BUT some endpoints (e.g. Helius *dedicated* subdomains like `…-fast-mainnet`)
+/// don't resolve on every network — they fail DNS on Starlink/some carriers while
+/// the browser + `flashapi.trade` resolve fine. So the app PROBES the candidates
+/// below at startup ([resolveRpc]) and uses the first that actually resolves +
+/// responds — a dead endpoint self-heals across the whole app (balances, funding,
+/// ride), instead of every call dying with "Failed host lookup".
 const String _rpcOverride = String.fromEnvironment('THROTL_RPC');
-const String kBaseRpc = _rpcOverride == ''
-    ? 'https://karine-caqxkl-fast-mainnet.helius-rpc.com'
-    : _rpcOverride;
+
+/// Tried in order; the override (if any) first, then well-propagated endpoints that
+/// resolve everywhere.
+const List<String> kRpcCandidates = [
+  if (_rpcOverride != '') _rpcOverride,
+  'https://mainnet.helius-rpc.com/?api-key=65e62146-bb34-47a1-8567-60b2fbb70953',
+  'https://solana-rpc.publicnode.com',
+  'https://api.mainnet-beta.solana.com',
+];
+
+/// The RPC the whole app uses (set by [resolveRpc]; starts as the first candidate).
+String _activeRpc = kRpcCandidates.first;
+
+/// Probe each candidate once at startup; switch the active RPC to the first that
+/// resolves + responds. Cheap (`getLatestBlockhash`); a non-resolving host fails
+/// fast (~200ms) so the whole probe is ~1s worst case.
+Future<void> resolveRpc() async {
+  for (final url in kRpcCandidates) {
+    try {
+      await RpcClient(url).getLatestBlockhash();
+      _activeRpc = url;
+      return;
+    } on Object {
+      // unresolvable / unreachable / rate-limited — try the next
+    }
+  }
+}
 
 /// Which Solana cluster the app is pointed at. Mainnet is the only network now —
 /// the `throtl-engine` program (same ID) is deployed there, and Flash Trade (the
@@ -25,7 +50,6 @@ class NetworkConfig {
   const NetworkConfig({
     required this.cluster,
     required this.label,
-    required this.baseRpc,
     required this.routerUrl,
     required this.oracleFeedPda,
     required this.usdcMint,
@@ -39,8 +63,9 @@ class NetworkConfig {
   /// Short display label for the network chip.
   final String label;
 
-  /// L1 base RPC — balances, `init_ride`/`delegate_ride` submit, `close_ride`.
-  final String baseRpc;
+  /// L1 base RPC — balances, `init_ride`/`delegate_ride` submit, `close_ride`,
+  /// Flash setup/withdraw. Dynamic: the first reachable candidate (see [resolveRpc]).
+  String get baseRpc => _activeRpc;
 
   /// MagicBlock Magic Router — region/ER discovery + delegation status.
   final String routerUrl;
@@ -68,7 +93,6 @@ class NetworkConfig {
   static const mainnet = NetworkConfig(
     cluster: AppCluster.mainnet,
     label: 'MAINNET',
-    baseRpc: kBaseRpc,
     routerUrl: RouterClient.mainnet,
     oracleFeedPda: devnetSolPriceFeedPda, // TODO(throtl): confirm mainnet Lazer SOL feed PDA
     usdcMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // mainnet USDC

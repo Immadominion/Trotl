@@ -3,11 +3,14 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- No custom networkSecurityConfig: on some (esp. MediaTek) devices it makes
+         dart:io report "Failed host lookup" for hosts that the browser resolves
+         fine. usesCleartextTraffic=true keeps the localhost GLB viewer working. -->
     <application
         android:label="throtl"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:networkSecurityConfig="@xml/network_security_config">
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

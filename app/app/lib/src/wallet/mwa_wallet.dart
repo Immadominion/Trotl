@@ -58,7 +58,7 @@ class MwaWallet {
     }
     final session = await LocalAssociationScenario.create();
     try {
-      session.startActivityForResult(null).ignore();
+      await session.startActivityForResult(null);
       final client = await session.start();
       final auth = await client.authorize(
         identityUri: _identityUri,
