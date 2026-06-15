@@ -7,6 +7,7 @@ import 'package:throtl/src/chain/rent_reclaim.dart';
 import 'package:throtl/src/screens/connect_sheet.dart';
 import 'package:throtl/src/theme/theme_controller.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 import 'package:throtl/src/widgets/fund_sheet.dart';
@@ -24,124 +25,167 @@ class SettingsScreen extends StatelessWidget {
     final tc = context.watch<ThemeController>();
     final wallet = context.watch<WalletController>();
     final p = tc.palette;
+    final banner = Align(
+      alignment: Alignment.centerLeft,
+      child: BannerPlate(kicker: 'GARAGE', title: 'SETTINGS', color: p.purple),
+    );
+    final musicCard = _ToggleCard(
+      title: 'MUSIC',
+      subtitle: 'Race loop + win / loss jingles.',
+      on: tc.musicOn,
+      onToggle: () {
+        final next = !tc.musicOn;
+        unawaited(tc.setMusic(on: next));
+        unawaited(music.setEnabled(on: next));
+        if (next) {
+          unawaited(music.startMenuLoop());
+        } else {
+          sfx.toggle();
+        }
+      },
+    );
+    final soundFx = _ToggleCard(
+      title: 'SOUND FX',
+      subtitle: 'Clicks, coin pops, spin-out skid.',
+      on: tc.sfxOn,
+      onToggle: () {
+        final next = !tc.sfxOn;
+        unawaited(tc.setSfx(on: next));
+        unawaited(sfx.setEnabled(on: next));
+        sfx.toggle();
+      },
+    );
+    final rideToggle = _ToggleCard(
+      title: wallet.isConnected ? 'LIVE · MAINNET' : 'PRACTICE',
+      subtitle: wallet.isConnected
+          ? 'Real funds on mainnet · ${wallet.ownerShort}'
+          : 'Fake funds vs the real mainnet market.',
+      on: wallet.isConnected,
+      onToggle: () {
+        sfx.toggle();
+        if (wallet.isConnected) {
+          unawaited(wallet.disconnect());
+        } else {
+          unawaited(showConnectSheet(context));
+        }
+      },
+    );
+    final themeDropdown = _ThemeDropdown(
+      activeKey: tc.palette.key,
+      activeLabel: tc.palette.label,
+    );
+    final credits = ChunkyCard(
+      color: const Color(0xFFFFF1D6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Text(
+        'Themes restyle the whole app to a Solana-ecosystem brand. SFX are '
+        'CC0 Kenney; music by SoundSurfer & Viacheslav Starostin (Pixabay).',
+        style: bodyStyle(
+          size: 10.5,
+          color: shade(p.ink, 0.2),
+          weight: FontWeight.w800,
+          height: 1.5,
+        ),
+      ),
+    );
+
+    // Sections: audio + theme = "preferences"; ride mode + funds = "money".
+    final audio = <Widget>[musicCard, const SizedBox(height: 10), soundFx];
+    final theme = <Widget>[
+      _label(p, 'BRAND THEME'),
+      themeDropdown,
+      const SizedBox(height: 12),
+      credits,
+    ];
+    final money = <Widget>[
+      _label(p, 'RIDE MODE'),
+      rideToggle,
+      const SizedBox(height: 10),
+      const _FundsCard(),
+      const _ReclaimCard(),
+    ];
+
     return GameScaffold(
       padding: const EdgeInsets.only(bottom: 18),
-      bodyScrolls: true,
-      bottomBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: ChunkyButton(
-          label: 'DONE',
-          color: p.orange,
-          big: true,
-          sfxName: 'back',
-          onTap: onBack,
+      bodyScrolls: !context.isWide,
+      bottomBar: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 540),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ChunkyButton(
+              label: 'DONE',
+              color: p.orange,
+              big: true,
+              sfxName: 'back',
+              onTap: onBack,
+            ),
+          ),
         ),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: BannerPlate(
-                kicker: 'GARAGE',
-                title: 'SETTINGS',
-                color: p.purple,
+        child: context.isWide
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  banner,
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [...audio, const SizedBox(height: 14), ...theme],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: money,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  banner,
+                  const SizedBox(height: 12),
+                  ...audio,
+                  const SizedBox(height: 14),
+                  ...money,
+                  const SizedBox(height: 14),
+                  ...theme,
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            _ToggleCard(
-              title: 'MUSIC',
-              subtitle: 'Race loop + win / loss jingles.',
-              on: tc.musicOn,
-              onToggle: () {
-                final next = !tc.musicOn;
-                unawaited(tc.setMusic(on: next));
-                unawaited(music.setEnabled(on: next));
-                if (next) {
-                  unawaited(music.startMenuLoop());
-                } else {
-                  sfx.toggle();
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-            _ToggleCard(
-              title: 'SOUND FX',
-              subtitle: 'Clicks, coin pops, spin-out skid.',
-              on: tc.sfxOn,
-              onToggle: () {
-                final next = !tc.sfxOn;
-                unawaited(tc.setSfx(on: next));
-                unawaited(sfx.setEnabled(on: next));
-                sfx.toggle();
-              },
-            ),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.only(left: 2, bottom: 10),
-              child: Text(
-                'RIDE MODE',
-                style: displayStyle(
-                  size: 13,
-                  color: p.white,
-                  letterSpacing: 1.3,
-                  shadow: p.ink,
-                  shadowDy: 1.5,
-                ),
-              ),
-            ),
-            _ToggleCard(
-              title: wallet.isConnected ? 'LIVE · MAINNET' : 'PRACTICE',
-              subtitle: wallet.isConnected
-                  ? 'Real funds on mainnet · ${wallet.ownerShort}'
-                  : 'Fake funds vs the real mainnet market.',
-              on: wallet.isConnected,
-              onToggle: () {
-                sfx.toggle();
-                if (wallet.isConnected) {
-                  unawaited(wallet.disconnect());
-                } else {
-                  unawaited(showConnectSheet(context));
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-            const _FundsCard(),
-            const _ReclaimCard(),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.only(left: 2, bottom: 10),
-              child: Text(
-                'BRAND THEME',
-                style: displayStyle(
-                  size: 13,
-                  color: p.white,
-                  letterSpacing: 1.3,
-                  shadow: p.ink,
-                  shadowDy: 1.5,
-                ),
-              ),
-            ),
-            _ThemeDropdown(activeKey: tc.palette.key, activeLabel: tc.palette.label),
-            const SizedBox(height: 12),
-            ChunkyCard(
-              color: const Color(0xFFFFF1D6),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Text(
-                'Themes restyle the whole app to a Solana-ecosystem brand. SFX are '
-                'CC0 Kenney; music by SoundSurfer & Viacheslav Starostin (Pixabay).',
-                style: bodyStyle(
-                  size: 10.5,
-                  color: shade(p.ink, 0.2),
-                  weight: FontWeight.w800,
-                  height: 1.5,
-                ),
-              ),
-            ),
-          ],
+      ),
+    );
+  }
+
+  Widget _label(ThrotlPalette p, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2, bottom: 10),
+      child: Text(
+        text,
+        style: displayStyle(
+          size: 13,
+          color: p.white,
+          letterSpacing: 1.3,
+          shadow: p.ink,
+          shadowDy: 1.5,
         ),
       ),
     );

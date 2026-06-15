@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/util/session_history.dart';
 import 'package:throtl/src/widgets/balance_pill.dart';
 import 'package:throtl/src/widgets/chunky.dart';
@@ -66,42 +67,84 @@ class _PaddockScreenState extends State<PaddockScreen> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: BannerPlate(
-                    kicker: 'PADDOCK',
-                    title: 'RACE HISTORY',
-                    color: p.cyan,
-                  ),
-                ),
-                const Spacer(),
-                const Padding(
-                  padding: EdgeInsets.only(top: 14),
-                  child: BalancePill(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 11),
-            const _LiveExplorer(),
-            const SizedBox(height: 11),
-            if (_loaded && _sessions.isEmpty)
-              _emptyState(p)
-            else
-              for (final session in _sessions) ...[
-                _SessionRow(session: session),
-                const SizedBox(height: 8),
-              ],
-          ],
+      child: context.isWide ? _wideChild(p) : _phoneChild(p),
+    );
+  }
+
+  Widget _header(ThrotlPalette p) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: BannerPlate(kicker: 'PADDOCK', title: 'RACE HISTORY', color: p.cyan),
         ),
+        const Spacer(),
+        const Padding(padding: EdgeInsets.only(top: 14), child: BalancePill()),
+      ],
+    );
+  }
+
+  /// Phone: header, live explorer, then the history as a single column.
+  Widget _phoneChild(ThrotlPalette p) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _header(p),
+          const SizedBox(height: 11),
+          const _LiveExplorer(),
+          const SizedBox(height: 11),
+          if (_loaded && _sessions.isEmpty)
+            _emptyState(p)
+          else
+            for (final session in _sessions) ...[
+              _SessionRow(session: session),
+              const SizedBox(height: 8),
+            ],
+        ],
       ),
     );
+  }
+
+  /// Wide: header + live explorer full-width, then the history as a 2-column grid.
+  Widget _wideChild(ThrotlPalette p) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _header(p),
+        const SizedBox(height: 11),
+        const _LiveExplorer(),
+        const SizedBox(height: 11),
+        Expanded(
+          child: SingleChildScrollView(
+            child: (_loaded && _sessions.isEmpty) ? _emptyState(p) : _sessionGrid(_sessions),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sessionGrid(List<RaceSession> sessions) {
+    final rows = <Widget>[];
+    for (var i = 0; i < sessions.length; i += 2) {
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _SessionRow(session: sessions[i])),
+            const SizedBox(width: 10),
+            Expanded(
+              child: i + 1 < sessions.length
+                  ? _SessionRow(session: sessions[i + 1])
+                  : const SizedBox(),
+            ),
+          ],
+        ),
+      );
+      if (i + 2 < sessions.length) rows.add(const SizedBox(height: 8));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
   }
 
   Widget _emptyState(ThrotlPalette p) {
