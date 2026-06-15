@@ -6,6 +6,7 @@ import 'package:throtl/src/scene/hill_scene.dart';
 import 'package:throtl/src/theme/theme_controller.dart';
 import 'package:throtl/src/theme/tokens.dart';
 import 'package:throtl/src/util/format.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 import 'package:throtl/src/widgets/race_controls.dart';
@@ -29,109 +30,146 @@ class RaceScreen extends StatelessWidget {
     return GameScaffold(
       fillWidth: true, // the cockpit uses the whole landscape on web/tablet
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // header — rebuilds on ride for the live PnL pill
-          ListenableBuilder(
-            listenable: ride,
-            builder: (context, _) {
-              final s = ride.snapshot;
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Expanded(
-                    child: BannerPlate(
-                      kicker: 'SOL-PERP SPEEDWAY',
-                      title: 'MARKET',
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      StatPill(
-                        icon: const CoinIcon(size: 18),
-                        value: fmtMoney6(s.totalPnl6),
-                        color: p.yellow,
-                      ),
-                      const SizedBox(height: 7),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: ChunkyButton(
-                          label: 'PIT IN ■',
-                          color: p.purple,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          onTap: () => onPitIn(ride.finish()),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
+      child: context.isWide ? _wideBody(p, theme, netTag) : _phoneBody(p, theme, netTag),
+    );
+  }
+
+  /// Phone / portrait: header, the scene fills, gauges stacked below.
+  Widget _phoneBody(ThrotlPalette p, ThemeController theme, String netTag) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _header(p),
+        const SizedBox(height: 10),
+        Expanded(child: _scene(theme)),
+        const SizedBox(height: 10),
+        _gauges(p, netTag),
+        const SizedBox(height: 6),
+        _hint(p),
+      ],
+    );
+  }
+
+  /// Wide (iPad landscape / desktop): the hill scene fills the landscape and the
+  /// gauges (OPEN PNL + LAP TICKER) become a right-hand HUD rail — the cockpit
+  /// uses the whole screen instead of stacking the HUD below a squashed scene.
+  Widget _wideBody(ThrotlPalette p, ThemeController theme, String netTag) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _header(p),
+        const SizedBox(height: 10),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _scene(theme)),
+              const SizedBox(width: 14),
+              SizedBox(width: 320, child: _gauges(p, netTag, rail: true)),
+            ],
           ),
-          const SizedBox(height: 10),
-          // scene + throttle live OUTSIDE the ride listener: the scene drives
-          // itself at 60fps and the rail manages its own state, so neither is
-          // rebuilt by ride notifications — the drag is never interrupted
-          Expanded(
-            child: RaceControls(
-              ride: ride,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: HillScene(
-                      ride: ride,
-                      feed: ride.feed,
-                      car: theme.car,
-                      tint: theme.tint,
-                    ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 8,
-                    bottom: 12,
-                    width: 74,
-                    child: ThrottleRail(ride: ride),
-                  ),
-                ],
-              ),
+        ),
+        const SizedBox(height: 6),
+        _hint(p),
+      ],
+    );
+  }
+
+  // header — rebuilds on ride for the live PnL pill
+  Widget _header(ThrotlPalette p) {
+    return ListenableBuilder(
+      listenable: ride,
+      builder: (context, _) {
+        final s = ride.snapshot;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Expanded(
+              child: BannerPlate(kicker: 'SOL-PERP SPEEDWAY', title: 'MARKET'),
             ),
-          ),
-          const SizedBox(height: 10),
-          // gauges — rebuild on ride
-          ListenableBuilder(
-            listenable: ride,
-            builder: (context, _) {
-              final s = ride.snapshot;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _pnlCard(p, s),
-                  const SizedBox(height: 8),
-                  _ticker(p, s, netTag),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 6),
-          Text(
-            kIsWeb
-                ? 'W/S OR ↑/↓ TO LEVER · RELEASE TO BANK · X TO SPIN OUT'
-                : 'HOLD TO LEVER · RELEASE TO BANK · FLICK ↓ TO SPIN OUT',
-            textAlign: TextAlign.center,
-            style:
-                bodyStyle(
-                  size: 10.5,
-                  color: const Color(0xD9FFFFFF),
-                  weight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                ).copyWith(
-                  shadows: [Shadow(color: p.ink, offset: const Offset(0, 1.5))],
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                StatPill(
+                  icon: const CoinIcon(size: 18),
+                  value: fmtMoney6(s.totalPnl6),
+                  color: p.yellow,
                 ),
+                const SizedBox(height: 7),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ChunkyButton(
+                    label: 'PIT IN ■',
+                    color: p.purple,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    onTap: () => onPitIn(ride.finish()),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // scene + throttle live OUTSIDE the ride listener: the scene drives itself at
+  // 60fps and the rail manages its own state, so neither is rebuilt by ride
+  // notifications — the drag is never interrupted.
+  Widget _scene(ThemeController theme) {
+    return RaceControls(
+      ride: ride,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: HillScene(ride: ride, feed: ride.feed, car: theme.car, tint: theme.tint),
+          ),
+          Positioned(
+            top: 12,
+            right: 8,
+            bottom: 12,
+            width: 74,
+            child: ThrottleRail(ride: ride),
           ),
         ],
       ),
+    );
+  }
+
+  // gauges — rebuild on ride. In the wide HUD rail the ticker fills the column.
+  Widget _gauges(ThrotlPalette p, String netTag, {bool rail = false}) {
+    return ListenableBuilder(
+      listenable: ride,
+      builder: (context, _) {
+        final s = ride.snapshot;
+        final ticker = _ticker(p, s, netTag);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _pnlCard(p, s),
+            const SizedBox(height: 8),
+            if (rail) Expanded(child: ticker) else ticker,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _hint(ThrotlPalette p) {
+    return Text(
+      kIsWeb
+          ? 'W/S OR ↑/↓ TO LEVER · RELEASE TO BANK · X TO SPIN OUT'
+          : 'HOLD TO LEVER · RELEASE TO BANK · FLICK ↓ TO SPIN OUT',
+      textAlign: TextAlign.center,
+      style:
+          bodyStyle(
+            size: 10.5,
+            color: const Color(0xD9FFFFFF),
+            weight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ).copyWith(
+            shadows: [Shadow(color: p.ink, offset: const Offset(0, 1.5))],
+          ),
     );
   }
 

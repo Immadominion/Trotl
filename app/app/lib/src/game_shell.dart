@@ -72,13 +72,18 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     if (widget.showOnboarding) _screen = ScreenId.onboarding;
+    _feed = FlashPriceFeed()..start();
     if (_debugStart.isNotEmpty) {
       _screen = ScreenId.values.firstWhere(
         (s) => s.name == _debugStart,
         orElse: () => _screen,
       );
+      // The race cockpit needs a live ride engine — wire a practice ride so it
+      // renders when booting straight to it for responsive screenshots.
+      if (_screen == ScreenId.race) {
+        _ride = RideController(feed: _feed, config: _buildConfig())..start();
+      }
     }
-    _feed = FlashPriceFeed()..start();
     WidgetsBinding.instance.addObserver(this);
     // App-open ambience — the menu loop plays under every non-race screen.
     unawaited(music.startMenuLoop());
