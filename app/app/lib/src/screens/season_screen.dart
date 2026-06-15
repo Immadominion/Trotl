@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 
 /// One pilot row in the season leaderboard.
@@ -33,77 +34,126 @@ class SeasonScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final leaderboard = <Widget>[
+      for (final pilot in _rows) ...[
+        _PilotRow(pilot: pilot, palette: p),
+        if (pilot != _rows.last) const SizedBox(height: 8),
+      ],
+    ];
     return GameScaffold(
-      bodyScrolls: true,
-      bottomBar: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: ChunkyButton(
-              label: 'BACK',
-              color: p.purple,
-              onTap: onBack,
-              sfxName: 'back',
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 3,
-            child: ChunkyButton(
-              label: 'CLIMB · START RACE',
-              color: p.orange,
-              onTap: onRace,
-              big: true,
-            ),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      fillWidth: true,
+      bodyScrolls: !context.isWide,
+      bottomBar: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Row(
             children: [
               Expanded(
-                child: BannerPlate(
-                  kicker: 'SEASON 1 · 12 DAYS LEFT',
-                  title: 'LEADERBOARD',
+                flex: 2,
+                child: ChunkyButton(
+                  label: 'BACK',
                   color: p.purple,
+                  onTap: onBack,
+                  sfxName: 'back',
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: StatPill(
-                  icon: const CoinIcon(size: 18),
-                  value: '1,204',
-                  color: p.yellow,
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 3,
+                child: ChunkyButton(
+                  label: 'CLIMB · START RACE',
+                  color: p.orange,
+                  onTap: onRace,
+                  big: true,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 11),
-          _YourRankCard(palette: p),
-          const SizedBox(height: 11),
-          for (final pilot in _rows) ...[
-            _PilotRow(pilot: pilot, palette: p),
-            if (pilot != _rows.last) const SizedBox(height: 8),
-          ],
-          const SizedBox(height: 11),
-          ChunkyCard(
-            color: const Color(0xFFFFF1D6),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Text(
-              r'Ranked by realized PnL per $ staked — not size. '
-              'Top 100 pilots split the season SKR pool.',
-              style: bodyStyle(
-                size: 11.5,
-                color: shade(p.ink, 0.2),
-                weight: FontWeight.w800,
-                height: 1.5,
-              ),
+        ),
+      ),
+      child: context.isWide
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _header(p),
+                const SizedBox(height: 11),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _YourRankCard(palette: p),
+                              const SizedBox(height: 11),
+                              _credits(p),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: leaderboard,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _header(p),
+                const SizedBox(height: 11),
+                _YourRankCard(palette: p),
+                const SizedBox(height: 11),
+                ...leaderboard,
+                const SizedBox(height: 11),
+                _credits(p),
+              ],
             ),
+    );
+  }
+
+  Widget _header(ThrotlPalette p) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: BannerPlate(
+            kicker: 'SEASON 1 · 12 DAYS LEFT',
+            title: 'LEADERBOARD',
+            color: p.purple,
           ),
-        ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: StatPill(icon: const CoinIcon(size: 18), value: '1,204', color: p.yellow),
+        ),
+      ],
+    );
+  }
+
+  Widget _credits(ThrotlPalette p) {
+    return ChunkyCard(
+      color: const Color(0xFFFFF1D6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Text(
+        r'Ranked by realized PnL per $ staked — not size. '
+        'Top 100 pilots split the season SKR pool.',
+        style: bodyStyle(
+          size: 11.5,
+          color: shade(p.ink, 0.2),
+          weight: FontWeight.w800,
+          height: 1.5,
+        ),
       ),
     );
   }

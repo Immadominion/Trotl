@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:throtl/src/audio/sfx.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 
 /// The "Pit Bay" — gear cards that honestly map to real protocol parts.
@@ -37,111 +38,165 @@ class PitBayScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    return GameScaffold(
-      bodyScrolls: true,
-      bottomBar: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            flex: 10,
-            child: ChunkyButton(
-              label: 'BACK TO GARAGE',
-              color: p.purple,
-              onTap: onBack,
-              sfxName: 'back',
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 14,
-            child: ChunkyButton(
-              label: 'START RACE',
-              color: p.orange,
-              big: true,
-              onTap: onRace,
-            ),
-          ),
-        ],
+    final erEngine = _GearCard(
+      icon: Icons.bolt,
+      accent: p.cyan,
+      name: 'ER ENGINE',
+      description:
+          'MagicBlock ephemeral rollup — streams your exposure '
+          'onchain every 30–50ms, gasless. This is the car’s engine. '
+          'Cannot be unequipped.',
+      chip: 'EQUIPPED',
+      chipColor: p.green,
+    );
+    final gripCard = _GripCard(
+      bands: _bands,
+      selectedBps: gripBandBps,
+      onGrip: onGrip,
+      description: _gripDesc(gripBandBps),
+    );
+    final flashBoost = _GearCard(
+      icon: Icons.local_fire_department,
+      accent: p.orange,
+      name: 'FLASH BOOST',
+      description:
+          'Settlement venue: Flash Trade. Builder-code rebates flow '
+          'back to you as coins at the finish line.',
+      chip: 'EQUIPPED',
+      chipColor: p.green,
+    );
+    final nitro = _GearCard(
+      icon: Icons.lock,
+      accent: p.cyan,
+      name: 'NITRO TRAIL',
+      description:
+          'Cosmetic exhaust burst for your spin-outs and wins. Earned, '
+          'never bought — unlocks at Pilot LV 8.',
+      chip: 'LOCKED · LV 8',
+      chipColor: const Color(0xFF5A6072),
+      locked: true,
+    );
+    final honesty = ChunkyCard(
+      color: const Color(0xFFFFF1D6),
+      child: Text(
+        'Gear never changes your odds — skill and the market do. '
+        'Upgrades are protocol settings and cosmetics, not pay-to-win.',
+        style: bodyStyle(
+          size: 11.5,
+          color: shade(p.ink, 0.2),
+          weight: FontWeight.w800,
+          height: 1.5,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    );
+
+    return GameScaffold(
+      fillWidth: true,
+      bodyScrolls: !context.isWide,
+      bottomBar: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 10),
-                child: BannerPlate(kicker: 'PIT BAY', title: 'GEAR'),
+              Expanded(
+                flex: 10,
+                child: ChunkyButton(
+                  label: 'BACK TO GARAGE',
+                  color: p.purple,
+                  onTap: onBack,
+                  sfxName: 'back',
+                ),
               ),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: StatPill(
-                  icon: const CoinIcon(size: 18),
-                  value: '1,204',
-                  color: p.yellow,
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 14,
+                child: ChunkyButton(
+                  label: 'START RACE',
+                  color: p.orange,
+                  big: true,
+                  onTap: onRace,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 11),
-          _GearCard(
-            icon: Icons.bolt,
-            accent: p.cyan,
-            name: 'ER ENGINE',
-            description:
-                'MagicBlock ephemeral rollup — streams your exposure '
-                'onchain every 30–50ms, gasless. This is the car’s engine. '
-                'Cannot be unequipped.',
-            chip: 'EQUIPPED',
-            chipColor: p.green,
-          ),
-          const SizedBox(height: 11),
-          _GripCard(
-            bands: _bands,
-            selectedBps: gripBandBps,
-            onGrip: onGrip,
-            description: _gripDesc(gripBandBps),
-          ),
-          const SizedBox(height: 11),
-          _GearCard(
-            icon: Icons.local_fire_department,
-            accent: p.orange,
-            name: 'FLASH BOOST',
-            description:
-                'Settlement venue: Flash Trade. Builder-code rebates flow '
-                'back to you as coins at the finish line.',
-            chip: 'EQUIPPED',
-            chipColor: p.green,
-          ),
-          const SizedBox(height: 11),
-          _GearCard(
-            icon: Icons.lock,
-            accent: p.cyan,
-            name: 'NITRO TRAIL',
-            description:
-                'Cosmetic exhaust burst for your spin-outs and wins. Earned, '
-                'never bought — unlocks at Pilot LV 8.',
-            chip: 'LOCKED · LV 8',
-            chipColor: const Color(0xFF5A6072),
-            locked: true,
-          ),
-          const SizedBox(height: 11),
-          ChunkyCard(
-            color: const Color(0xFFFFF1D6),
-            child: Text(
-              'Gear never changes your odds — skill and the market do. '
-              'Upgrades are protocol settings and cosmetics, not pay-to-win.',
-              style: bodyStyle(
-                size: 11.5,
-                color: shade(p.ink, 0.2),
-                weight: FontWeight.w800,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
+      child: context.isWide
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _header(p),
+                const SizedBox(height: 11),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              erEngine,
+                              const SizedBox(height: 11),
+                              gripCard,
+                              const SizedBox(height: 11),
+                              honesty,
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              flashBoost,
+                              const SizedBox(height: 11),
+                              nitro,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _header(p),
+                const SizedBox(height: 11),
+                erEngine,
+                const SizedBox(height: 11),
+                gripCard,
+                const SizedBox(height: 11),
+                flashBoost,
+                const SizedBox(height: 11),
+                nitro,
+                const SizedBox(height: 11),
+                honesty,
+              ],
+            ),
+    );
+  }
+
+  Widget _header(ThrotlPalette p) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: BannerPlate(kicker: 'PIT BAY', title: 'GEAR'),
+        ),
+        const Spacer(),
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: StatPill(icon: const CoinIcon(size: 18), value: '1,204', color: p.yellow),
+        ),
+      ],
     );
   }
 }
