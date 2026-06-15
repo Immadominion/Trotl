@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:magicblock_client/magicblock_client.dart';
+import 'package:throtl/src/chain/go_live.dart';
 
 /// A SOL/USD price source for the ride. Emits a `priceE9` (1e9 fixed-point int,
 /// the engine's mark unit) and keeps a rolling history the race scene reads for
@@ -228,12 +229,15 @@ class FlashPriceFeed extends PriceFeed {
   @override
   void start() {
     unawaited(_poll());
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => unawaited(_poll()));
+    // 1s cadence so the live PnL visibly ticks (with the sub-cent precision in the
+    // race HUD) instead of jumping every 2s. Still the Flash venue price — keeps
+    // PnL honest against where the trade actually settles.
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => unawaited(_poll()));
   }
 
   Future<void> _poll() async {
     try {
-      final res = await _http.get(Uri.parse('https://flashapi.trade/v2/prices/SOL'));
+      final res = await _http.get(Uri.parse('$flashApiBase/prices/SOL'));
       if (res.statusCode != 200) return;
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final ui = double.tryParse('${body['priceUi'] ?? ''}');

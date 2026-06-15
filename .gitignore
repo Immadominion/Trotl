@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+# dart-define-from-file values (real RPC keys live here, locally only)
+**/env.json
+!**/env.example.json
 *.key
 *-keypair.json
 **/keypairs/*.json

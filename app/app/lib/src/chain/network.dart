@@ -21,14 +21,29 @@ import 'package:solana/solana.dart';
 /// `--dart-define=THROTL_RPC=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY`.
 const String _rpcOverride = String.fromEnvironment('THROTL_RPC');
 
-/// Tried in order: the override (if any) first, then broadly-resolvable public
-/// mainnet endpoints. NOT Helius by default — its domain is the one that fails to
-/// resolve on the target device (inject it via THROTL_RPC if your network has it).
+/// Public L1 fallbacks. Like every endpoint here they're read from compile-time
+/// env vars with a public default, so a private/paid RPC can be injected at build
+/// time (`--dart-define-from-file=env.json`, gitignored) and NEVER committed.
+const String _rpcPublic1 = String.fromEnvironment(
+  'THROTL_RPC2',
+  defaultValue: 'https://solana-rpc.publicnode.com',
+);
+const String _rpcPublic2 = String.fromEnvironment(
+  'THROTL_RPC3',
+  defaultValue: 'https://solana.drpc.org',
+);
+
+/// Tried in order: the private override (if any) first, then broadly-resolvable
+/// public mainnet endpoints. NOT Helius by default — its domain is the one that
+/// fails to resolve on the target device; inject your own key via THROTL_RPC (env).
+///
+/// `api.mainnet-beta.solana.com` was deliberately DROPPED: Solana Labs rate-limits
+/// it hard (429), and every transient blip re-probes this whole list ([resolveRpc]),
+/// so a rate-limited endpoint turns one 429 into a probe storm.
 const List<String> kRpcCandidates = [
   if (_rpcOverride != '') _rpcOverride,
-  'https://solana-rpc.publicnode.com',
-  'https://api.mainnet-beta.solana.com',
-  'https://solana.drpc.org',
+  _rpcPublic1,
+  _rpcPublic2,
 ];
 
 /// The RPC the whole app uses (set by [resolveRpc]; starts as the first candidate).
@@ -37,11 +52,24 @@ String _activeRpc = kRpcCandidates.first;
 /// The active base RPC URL (for diagnostics / display).
 String get activeRpc => _activeRpc;
 
-/// Probe each candidate once at startup; switch the active RPC to the first that
-/// resolves + responds. Cheap (`getLatestBlockhash`); a non-resolving host fails
-/// fast (~200ms) so the whole probe is ~1s worst case. Logs the winner so a bad
-/// endpoint is visible in logcat instead of silently wedging every chain call.
-Future<void> resolveRpc() async {
+/// The last time [resolveRpc] actually re-probed. The wallet retry loops call
+/// resolveRpc() on EVERY transient blip (DNS flap / 429 / timeout); without a
+/// cooldown each call would re-ping every candidate, turning one failure into a
+/// burst of N requests against already-struggling free RPCs. We probe at most
+/// once per [_probeCooldown] and otherwise reuse the current active endpoint.
+DateTime? _lastProbeAt;
+const Duration _probeCooldown = Duration(seconds: 3);
+
+/// Probe each candidate once; switch the active RPC to the first that resolves +
+/// responds. Cheap (`getLatestBlockhash`); a non-resolving host fails fast so the
+/// whole probe is ~1s worst case. Debounced by [_probeCooldown] so retry loops
+/// can call it freely. Pass `force: true` to bypass the cooldown (startup).
+Future<void> resolveRpc({bool force = false}) async {
+  final now = DateTime.now();
+  if (!force && _lastProbeAt != null && now.difference(_lastProbeAt!) < _probeCooldown) {
+    return; // probed moments ago — reuse the active endpoint instead of hammering
+  }
+  _lastProbeAt = now;
   for (final url in kRpcCandidates) {
     try {
       await RpcClient(url).getLatestBlockhash();

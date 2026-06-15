@@ -296,23 +296,48 @@ class MusicController {
   bool _ready = false;
   bool _enabled = false;
   SoundHandle? _loop;
+  String? _loopTrack;
 
   bool get enabled => _enabled;
 
-  static const _tracks = <String>['mus-race', 'mus-win', 'mus-lose', 'mus-menu'];
+  // Looping background music (Pixabay, mp3), STREAMED from disk (LoadMode.disk)
+  // so the multi-minute tracks don't decode into ~100 MB of PCM each:
+  //   • menu — "Street Racing" by Viktor Sklemin (SoundSurfer) · Pixabay 262363
+  //   • race — "Racing Speed Gaming Music" by Viacheslav Starostin · Pixabay 361427
+  static const _menuTrack = 'soundsurfer-street-racing-262363';
+  static const _raceTrack = 'viacheslavstarostin-racing-speed-gaming-music-361427';
+  static const _menuVol = 0.4; // app-open ambience (40%, per spec)
+  static const _raceVol = 0.35; // in-race music — sits under the engine drone + SFX
+
+  // Short melodic stings (OGG) for the settings-toggle preview.
+  static const _stings = <String>['mus-win', 'mus-lose', 'mus-menu'];
 
   Future<void> init({required bool enabled}) async {
     _enabled = enabled;
     if (_ready) return;
     if (!await _backend.ensure()) return;
     try {
-      for (final name in _tracks) {
+      for (final name in _stings) {
         _sources[name] = await _backend.soloud.loadAsset('assets/audio/$name.ogg');
       }
       _ready = true;
     } on Object catch (e) {
-      debugPrint('MusicController: load failed ($e)');
+      debugPrint('MusicController: stings load failed ($e)');
       _ready = false;
+    }
+    // Stream the long mp3 beds from disk. Best-effort + separate from the stings:
+    // if this fails it just means no background music, never total silence.
+    try {
+      _sources[_menuTrack] = await _backend.soloud.loadAsset(
+        'assets/audio/$_menuTrack.mp3',
+        mode: LoadMode.disk,
+      );
+      _sources[_raceTrack] = await _backend.soloud.loadAsset(
+        'assets/audio/$_raceTrack.mp3',
+        mode: LoadMode.disk,
+      );
+    } on Object catch (e) {
+      debugPrint('MusicController: bg tracks load failed ($e)');
     }
   }
 
@@ -325,23 +350,34 @@ class MusicController {
     }
   }
 
-  /// Start the looping race ambiance (no-op if already looping or music off).
-  /// Kept low so the engine drone stays the star (the design rode on the
-  /// engine alone — this is a gentle optional bed).
-  Future<void> startRaceLoop() async {
-    if (!_enabled || !_ready || _loop != null) return;
-    final src = _sources['mus-race'];
+  /// Switch the looping background music to [track] at [volume] (no-op if it's
+  /// already the active loop, or music is off). Stops whatever was playing first,
+  /// so the menu and race beds never stack.
+  Future<void> _startLoop(String track, double volume) async {
+    if (!_enabled || !_ready) return;
+    if (_loopTrack == track && _loop != null) return;
+    await stopLoop();
+    final src = _sources[track];
     if (src == null) return;
     try {
-      _loop = await _backend.soloud.play(src, volume: 0.1, looping: true);
+      _loop = await _backend.soloud.play(src, volume: volume, looping: true);
+      _loopTrack = track;
     } on Object catch (_) {
       _loop = null;
+      _loopTrack = null;
     }
   }
+
+  /// App-open ambience — plays on every menu screen at 40%.
+  Future<void> startMenuLoop() => _startLoop(_menuTrack, _menuVol);
+
+  /// In-race music — swapped in when the ride starts, after the 3·2·1.
+  Future<void> startRaceLoop() => _startLoop(_raceTrack, _raceVol);
 
   Future<void> stopLoop() async {
     final h = _loop;
     _loop = null;
+    _loopTrack = null;
     if (h == null) return;
     try {
       await _backend.soloud.stop(h);
@@ -351,6 +387,7 @@ class MusicController {
   void stopLoopNow() {
     final h = _loop;
     _loop = null;
+    _loopTrack = null;
     if (h == null) return;
     try {
       unawaited(_backend.soloud.stop(h));

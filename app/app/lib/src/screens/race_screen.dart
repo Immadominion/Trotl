@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:throtl/src/engine/ride_controller.dart';
@@ -7,6 +8,7 @@ import 'package:throtl/src/theme/tokens.dart';
 import 'package:throtl/src/util/format.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl/src/widgets/chunky.dart';
+import 'package:throtl/src/widgets/race_controls.dart';
 import 'package:throtl/src/widgets/throttle_rail.dart';
 
 /// 03 · Race — the centerpiece. The hill-climb scene + live gauges, all driven
@@ -72,24 +74,27 @@ class RaceScreen extends StatelessWidget {
           // itself at 60fps and the rail manages its own state, so neither is
           // rebuilt by ride notifications — the drag is never interrupted
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: HillScene(
-                    ride: ride,
-                    feed: ride.feed,
-                    car: theme.car,
-                    tint: theme.tint,
+            child: RaceControls(
+              ride: ride,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: HillScene(
+                      ride: ride,
+                      feed: ride.feed,
+                      car: theme.car,
+                      tint: theme.tint,
+                    ),
                   ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 8,
-                  bottom: 12,
-                  width: 74,
-                  child: ThrottleRail(ride: ride),
-                ),
-              ],
+                  Positioned(
+                    top: 12,
+                    right: 8,
+                    bottom: 12,
+                    width: 74,
+                    child: ThrottleRail(ride: ride),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -110,7 +115,9 @@ class RaceScreen extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'HOLD TO LEVER · RELEASE TO BANK · FLICK ↓ TO SPIN OUT',
+            kIsWeb
+                ? 'W/S OR ↑/↓ TO LEVER · RELEASE TO BANK · X TO SPIN OUT'
+                : 'HOLD TO LEVER · RELEASE TO BANK · FLICK ↓ TO SPIN OUT',
             textAlign: TextAlign.center,
             style:
                 bodyStyle(
@@ -145,7 +152,7 @@ class RaceScreen extends StatelessWidget {
                   ).copyWith(shadows: const []),
                 ),
                 Text(
-                  fmtMoney6(s.openPnl6),
+                  _fmtPnlLive(s.openPnl6),
                   style: displayStyle(
                     size: 26,
                     color: s.openPnl6 > 0
@@ -154,6 +161,17 @@ class RaceScreen extends StatelessWidget {
                         ? p.redDeep
                         : p.ink,
                   ).copyWith(shadows: const []),
+                ),
+                const SizedBox(height: 2),
+                // Live position line — reads the REAL snapshot, so FLAT is genuine.
+                Text(
+                  _positionLine(s),
+                  style: bodyStyle(
+                    size: 10.5,
+                    color: s.position.isFlat ? shade(p.ink, 0.4) : _sideColor(p, s),
+                    weight: FontWeight.w800,
+                    height: 1.2,
+                  ),
                 ),
               ],
             ),
@@ -200,6 +218,34 @@ class RaceScreen extends StatelessWidget {
       ),
     );
   }
+
+  /// Live open-PnL with sub-cent precision so minute real-time moves are visible —
+  /// cents alone round tiny ticks to "$0.00" and look frozen. 2dp once it's ≥ $1.
+  String _fmtPnlLive(int usd6) {
+    final v = usd6 / 1e6;
+    final sign = v > 0
+        ? '+'
+        : v < 0
+        ? '−'
+        : '';
+    final dp = v.abs() < 1 ? 4 : 2;
+    return '$sign\$${v.abs().toStringAsFixed(dp)}';
+  }
+
+  /// The live position descriptor under OPEN PNL — read from the REAL ride snapshot
+  /// (the on-chain settled position when live, the sim when practising), so "FLAT"
+  /// means genuinely no position, never a demo placeholder.
+  String _positionLine(RideSnapshot s) {
+    final pos = s.position;
+    if (pos.isFlat) return 'FLAT · no position';
+    final side = pos.side.sign > 0 ? 'LONG' : 'SHORT';
+    final size = pos.sizeUsd6 / 1e6;
+    final lev = s.levDisplay.abs();
+    return '$side · \$${size.toStringAsFixed(2)} · ${lev.toStringAsFixed(1)}×';
+  }
+
+  Color _sideColor(ThrotlPalette p, RideSnapshot s) =>
+      s.position.side.sign > 0 ? p.greenDeep : p.redDeep;
 
   Widget _ticker(ThrotlPalette p, RideSnapshot s, String netTag) {
     final rows = s.feed.take(3).toList();

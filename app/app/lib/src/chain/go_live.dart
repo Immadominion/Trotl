@@ -4,9 +4,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Flash Trade v2 endpoints (mainnet-only). Trades execute on Flash's own ER;
-/// setup (deposit/basket) + withdrawal go to the base mainnet RPC.
-const String flashErRpc = 'https://flash.magicblock.xyz';
-const String flashApiBase = 'https://flashapi.trade/v2';
+/// setup (deposit/basket) + withdrawal go to the base mainnet RPC. Overridable at
+/// build time (`--dart-define-from-file=env.json`) so nothing is pinned in code.
+const String flashErRpc = String.fromEnvironment(
+  'FLASH_ER_RPC',
+  defaultValue: 'https://flash.magicblock.xyz',
+);
+const String flashApiBase = String.fromEnvironment(
+  'FLASH_API_BASE',
+  defaultValue: 'https://flashapi.trade/v2',
+);
 
 /// The **go-live gate** — the deliberate switch between practice (simulated Flash,
 /// no funds) and real-money mode (the RealFlashGateway trades your own USDC on

@@ -12,6 +12,10 @@
 .swiftpm/
 migrate_working_dir/
 
+# Local env — dart-define-from-file values (NEVER commit real RPC keys).
+# Commit env.example.json (template); keep your real env.json local only.
+/env.json
+
 # IntelliJ related
 *.iml
 *.ipr

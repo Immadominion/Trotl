@@ -8,7 +8,11 @@
 
 ![Throtl — race the chart](docs/media/preview.gif)
 
+### [▶&nbsp; Watch the demo](https://youtu.be/9TNQ2p8RQZk) &nbsp;·&nbsp; [⬇&nbsp; Download the Android APK](https://github.com/Immadominion/Trotl/releases/latest/download/throtl-hackathon-build.apk)
+
 </div>
+
+> **Try it in 60 seconds.** Grab the [APK](https://github.com/Immadominion/Trotl/releases/latest/download/throtl-hackathon-build.apk) on any Android phone (enable *“install unknown apps”* when prompted), open Throtl, and connect **Seed Vault / Solflare / Phantom** via Mobile Wallet Adapter. Practice mode needs no wallet — you ride the **live** SOL-perp price immediately; flip "go live" to trade real, self-custodied Flash positions. Prefer to watch first? The [demo video](https://youtu.be/9TNQ2p8RQZk) walks a full ride end-to-end.
 
 Throtl turns a perp trade into a thumb on a throttle. Your live exposure follows your finger at
 ~30 ms on a **MagicBlock Ephemeral Rollup**, mirrors into **real, self-custodied Flash Trade**

@@ -288,6 +288,23 @@ int computeWithdrawableRaw(Map<String, dynamic> basketAccount, String mint) {
   return credits < 0 ? 0 : credits;
 }
 
+/// Net basket adjustment for [mint] in raw units: `pendingCredits − debits`. Add
+/// this to the deposit-ledger balance for the spendable total — the protocol's
+/// `balance = deposits − debits + pendingCredits` (research/flash.md §3). The
+/// deposit itself is NOT in the basket; it lives in the on-chain deposit ledger,
+/// so a funded-but-not-yet-traded wallet has an all-zero basket and needs the
+/// ledger read added on top.
+int computeBasketNetRaw(Map<String, dynamic> basketAccount, String mint) =>
+    _sumBasketMint(basketAccount, 'pendingCredits', mint) -
+    _sumBasketMint(basketAccount, 'debits', mint);
+
+int _sumBasketMint(Map<String, dynamic> account, String key, String mint) {
+  final list = (account[key] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+  return list
+      .where((e) => e['mint'] == mint)
+      .fold<int>(0, (a, e) => a + ((e['amount'] as num?)?.toInt() ?? 0));
+}
+
 /// Best-effort extraction of a Flash on-chain error code (e.g. "0x1784" → 6020, or a bare "6020").
 int? extractOnChainCode(String s) {
   final hex = RegExp('0x([0-9a-fA-F]+)').firstMatch(s);

@@ -83,10 +83,7 @@ class _ArmingScreenState extends State<ArmingScreen> {
                 ),
               ),
               const Spacer(),
-              if (isError)
-                _errorBody(p)
-              else
-                _armingBody(p),
+              if (isError) _errorBody(p) else _armingBody(p),
               const Spacer(),
               if (isError) ...[
                 ChunkyButton(
@@ -194,7 +191,12 @@ class _ArmingScreenState extends State<ArmingScreen> {
               const SizedBox(width: 8),
               Text(
                 "Couldn't arm the ride",
-                style: displayStyle(size: 16, color: p.redDeep, shadowDy: 0, shadow: const Color(0x00000000)),
+                style: displayStyle(
+                  size: 16,
+                  color: p.redDeep,
+                  shadowDy: 0,
+                  shadow: const Color(0x00000000),
+                ),
               ),
             ],
           ),

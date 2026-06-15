@@ -40,8 +40,17 @@ class _Pop {
   final double dx;
 }
 
+/// A bare per-frame repaint signal. The scene's [Ticker] pulses this each frame
+/// and ONLY the scene's [AnimatedBuilder] subtree rebuilds — never the whole
+/// RaceScreen or the clip/border scaffold. Replaces the old per-frame
+/// `setState(() {})`, which rebuilt the entire widget tree 60×/sec.
+class _FrameSignal extends ChangeNotifier {
+  void pulse() => notifyListeners();
+}
+
 class _HillSceneState extends State<HillScene> with SingleTickerProviderStateMixin {
   late final Ticker _ticker = createTicker(_onFrame);
+  final _FrameSignal _frameSignal = _FrameSignal();
   final math.Random _rng = math.Random();
 
   Duration _elapsed = Duration.zero;
@@ -66,6 +75,7 @@ class _HillSceneState extends State<HillScene> with SingleTickerProviderStateMix
   void dispose() {
     sfx.engineStop();
     _ticker.dispose();
+    _frameSignal.dispose();
     super.dispose();
   }
 
@@ -117,15 +127,103 @@ class _HillSceneState extends State<HillScene> with SingleTickerProviderStateMix
     }
     _pops.removeWhere((p) => nowS - p.t > 0.9);
 
-    if (mounted) setState(() {});
+    // Was `setState(() {})` — a full-tree rebuild 60×/sec. Now just pulse the
+    // signal; the scene's AnimatedBuilder rebuilds in isolation. The ticker is
+    // disposed before the signal, so this can never fire after teardown.
+    _frameSignal.pulse();
   }
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: p.ink, width: 3),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: p.ink, offset: const Offset(0, 5))],
+        ),
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final w = c.maxWidth;
+            final h = c.maxHeight;
+            return Stack(
+              children: [
+                // Static backdrop (sky + grass): built and rastered once, then
+                // cached behind its own RepaintBoundary so the per-frame scene
+                // on top never forces these gradients to re-paint.
+                RepaintBoundary(child: _backdrop(h, p)),
+                // The live scene: a single AnimatedBuilder driven by the frame
+                // signal, so each 60fps tick rebuilds ONLY this subtree — not
+                // RaceScreen, not the clip/border scaffold, not the backdrop.
+                // Its RepaintBoundary keeps the animating raster off those layers.
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: AnimatedBuilder(
+                      animation: _frameSignal,
+                      builder: (context, _) => _scene(w, h, p),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// The static backdrop — sky gradient + grass apron. Independent of the frame
+  /// clock, so it builds once per layout and stays cached behind a boundary.
+  Widget _backdrop(double h, ThrotlPalette p) {
+    return Stack(
+      children: [
+        // sky
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF6FB7FF), Color(0xFF3E8BFF), Color(0xFF2F6FE0)],
+                stops: [0, 0.58, 1],
+              ),
+            ),
+          ),
+        ),
+        // grass apron
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: h * 0.30,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF57B85A), Color(0xFF3E9C45)],
+              ),
+              border: Border(top: BorderSide(color: p.ink, width: 3)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// The live scene — everything that moves with the market, the throttle, and
+  /// the scene clock. Rebuilt every frame by the [AnimatedBuilder] in [build],
+  /// in isolation from the rest of the tree.
+  Widget _scene(double w, double h, ThrotlPalette p) {
     final s = widget.ride.snapshot;
     final hist = widget.feed.history;
     final nowS = _elapsed.inMicroseconds / 1e6;
+
+    const cx = 0.44;
+    const cy = 0.6;
 
     final price = s.markE9 / 1e9;
     final up = s.markE9 >= widget.feed.prevE9;
@@ -167,193 +265,145 @@ class _HillSceneState extends State<HillScene> with SingleTickerProviderStateMix
     final carBob = math.sin(nowS * 7.5) * 1.6 * (1 + boost * 1.5);
     final pulse = (nowS * 1.8) % 1.0;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: p.ink, width: 3),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: p.ink, offset: const Offset(0, 5))],
+    return Stack(
+      children: [
+        _scenery(w, h),
+        // wind / speed lines streaking through the sky — count + speed
+        // rise with the throttle (the design's GSpeedLines + gZip)
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          height: cy * h * 0.84,
+          child: IgnorePointer(
+            child: ClipRect(
+              child: CustomPaint(
+                painter: _WindPainter(time: nowS, intensity: s.throttle.abs()),
+              ),
+            ),
+          ),
         ),
-        child: LayoutBuilder(
-          builder: (context, c) {
-            final w = c.maxWidth;
-            final h = c.maxHeight;
-            const cx = 0.44;
-            const cy = 0.6;
-            return Stack(
-              children: [
-                // sky
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xFF6FB7FF), Color(0xFF3E8BFF), Color(0xFF2F6FE0)],
-                        stops: [0, 0.58, 1],
-                      ),
-                    ),
-                  ),
-                ),
-                // grass apron
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: h * 0.30,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xFF57B85A), Color(0xFF3E9C45)],
-                      ),
-                      border: Border(top: BorderSide(color: p.ink, width: 3)),
-                    ),
-                  ),
-                ),
-                _scenery(w, h),
-                // wind / speed lines streaking through the sky — count + speed
-                // rise with the throttle (the design's GSpeedLines + gZip)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  height: cy * h * 0.84,
-                  child: IgnorePointer(
-                    child: ClipRect(
-                      child: CustomPaint(
-                        painter: _WindPainter(time: nowS, intensity: s.throttle.abs()),
-                      ),
-                    ),
-                  ),
-                ),
-                // the straight road — rotates around the car's contact point
-                // (cx, cy) so the surface under the car never moves: the car is
-                // always grounded, on any slope. Box centre = (cx*w, cy*h) and
-                // the painter draws the drivable surface at its vertical centre.
-                Positioned(
-                  left: cx * w - w * 0.95,
-                  top: cy * h - 45,
-                  width: w * 1.9,
-                  height: 90,
-                  child: Transform.rotate(
-                    angle: -incRad,
-                    child: CustomPaint(painter: _RoadPainter(_scroll, p.ink)),
-                  ),
-                ),
-                // the car + its shadow + nitro exhaust, grouped and grounded:
-                // bottom-centre rides the road surface at (cx, cy), wheels glued
-                // on any grade. Sized per-model so an F1 and a truck both sit
-                // correctly without distortion.
-                Positioned(
-                  left: cx * w - carW / 2,
-                  top: cy * h - carH + 9,
-                  width: carW,
-                  height: carH,
-                  child: IgnorePointer(
-                    child: RaceCar(
-                      asset: widget.car.side,
-                      aspect: widget.car.sideAspect,
-                      width: carW,
-                      slope: incRad,
-                      exposure: s.throttle,
-                      nitro: nitro,
-                      nitroColor: nitroCol,
-                      ink: p.ink,
-                      panic: s.panicActive,
-                      bob: carBob,
-                      pulse: pulse,
-                    ),
-                  ),
-                ),
-                // price tag
-                Positioned(
-                  left: cx * w - 40,
-                  top: cy * h + 26,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: p.cream,
-                      border: Border.all(color: p.ink, width: 2.5),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Text(
-                      '\$${price.toStringAsFixed(2)} ${up ? '▲' : '▼'}',
-                      style: displayStyle(
-                        size: 12,
-                        color: up ? p.greenDeep : p.redDeep,
-                      ).copyWith(shadows: const []),
-                    ),
-                  ),
-                ),
-                // coin / smoke pops
-                for (final pop in _pops)
-                  Positioned(
-                    left: cx * w + pop.dx,
-                    top: cy * h - (pop.loss ? 56 : 86) - (nowS - pop.t) * 30,
-                    child: Opacity(
-                      opacity: (1 - (nowS - pop.t) / 0.9).clamp(0.0, 1.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (pop.loss)
-                            Container(
-                              width: 13,
-                              height: 13,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xE65A6072),
-                                border: Border.all(color: p.ink, width: 2),
-                              ),
-                            )
-                          else
-                            const CoinIcon(size: 14),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${pop.loss ? '−' : '+'}\$${(pop.value6.abs() / 1e6).toStringAsFixed(2)}',
-                            style:
-                                displayStyle(
-                                  size: 14,
-                                  color: pop.loss ? const Color(0xFFFFD6D6) : p.white,
-                                ).copyWith(
-                                  shadows: [Shadow(color: p.ink, offset: const Offset(0, 2))],
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                // leverage plate + grade/alt
-                Positioned(top: 12, left: 12, child: _hud(p, lev, side, col, _vel, altFrac)),
-                // spin-out stamp
-                if (s.panicActive)
-                  Align(
-                    alignment: const Alignment(-0.1, -0.2),
-                    child: Transform.rotate(
-                      angle: -0.12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: p.red,
-                          border: Border.all(color: p.ink, width: 4),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [BoxShadow(color: p.ink, offset: const Offset(0, 5))],
-                        ),
-                        child: StrokeText(
-                          'SPIN-OUT!',
-                          strokeColor: p.ink,
-                          style: displayStyle(size: 30, color: p.white, shadowDy: 3),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
+        // the straight road — rotates around the car's contact point
+        // (cx, cy) so the surface under the car never moves: the car is
+        // always grounded, on any slope. Box centre = (cx*w, cy*h) and
+        // the painter draws the drivable surface at its vertical centre.
+        Positioned(
+          left: cx * w - w * 0.95,
+          top: cy * h - 45,
+          width: w * 1.9,
+          height: 90,
+          child: Transform.rotate(
+            angle: -incRad,
+            child: CustomPaint(painter: _RoadPainter(_scroll, p.ink)),
+          ),
         ),
-      ),
+        // the car + its shadow + nitro exhaust, grouped and grounded:
+        // bottom-centre rides the road surface at (cx, cy), wheels glued
+        // on any grade. Sized per-model so an F1 and a truck both sit
+        // correctly without distortion.
+        Positioned(
+          left: cx * w - carW / 2,
+          top: cy * h - carH + 9,
+          width: carW,
+          height: carH,
+          child: IgnorePointer(
+            child: RaceCar(
+              asset: widget.car.side,
+              aspect: widget.car.sideAspect,
+              width: carW,
+              slope: incRad,
+              exposure: s.throttle,
+              nitro: nitro,
+              nitroColor: nitroCol,
+              ink: p.ink,
+              panic: s.panicActive,
+              bob: carBob,
+              pulse: pulse,
+            ),
+          ),
+        ),
+        // price tag
+        Positioned(
+          left: cx * w - 40,
+          top: cy * h + 26,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+            decoration: BoxDecoration(
+              color: p.cream,
+              border: Border.all(color: p.ink, width: 2.5),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Text(
+              '\$${price.toStringAsFixed(2)} ${up ? '▲' : '▼'}',
+              style: displayStyle(
+                size: 12,
+                color: up ? p.greenDeep : p.redDeep,
+              ).copyWith(shadows: const []),
+            ),
+          ),
+        ),
+        // coin / smoke pops
+        for (final pop in _pops)
+          Positioned(
+            left: cx * w + pop.dx,
+            top: cy * h - (pop.loss ? 56 : 86) - (nowS - pop.t) * 30,
+            child: Opacity(
+              opacity: (1 - (nowS - pop.t) / 0.9).clamp(0.0, 1.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (pop.loss)
+                    Container(
+                      width: 13,
+                      height: 13,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xE65A6072),
+                        border: Border.all(color: p.ink, width: 2),
+                      ),
+                    )
+                  else
+                    const CoinIcon(size: 14),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${pop.loss ? '−' : '+'}\$${(pop.value6.abs() / 1e6).toStringAsFixed(2)}',
+                    style:
+                        displayStyle(
+                          size: 14,
+                          color: pop.loss ? const Color(0xFFFFD6D6) : p.white,
+                        ).copyWith(
+                          shadows: [Shadow(color: p.ink, offset: const Offset(0, 2))],
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        // leverage plate + grade/alt
+        Positioned(top: 12, left: 12, child: _hud(p, lev, side, col, _vel, altFrac)),
+        // spin-out stamp
+        if (s.panicActive)
+          Align(
+            alignment: const Alignment(-0.1, -0.2),
+            child: Transform.rotate(
+              angle: -0.12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+                decoration: BoxDecoration(
+                  color: p.red,
+                  border: Border.all(color: p.ink, width: 4),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: p.ink, offset: const Offset(0, 5))],
+                ),
+                child: StrokeText(
+                  'SPIN-OUT!',
+                  strokeColor: p.ink,
+                  style: displayStyle(size: 30, color: p.white, shadowDy: 3),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

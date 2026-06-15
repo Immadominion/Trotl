@@ -1,17 +1,16 @@
 import 'dart:async';
 
-import 'package:flash_client/flash_client.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:solana/solana.dart';
 import 'package:throtl/src/audio/sfx.dart';
 import 'package:throtl/src/chain/rent_reclaim.dart';
 import 'package:throtl/src/screens/connect_sheet.dart';
 import 'package:throtl/src/theme/theme_controller.dart';
 import 'package:throtl/src/theme/tokens.dart';
-import 'package:throtl/src/wallet/flash_funding.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl/src/widgets/chunky.dart';
+import 'package:throtl/src/widgets/fund_sheet.dart';
+import 'package:throtl/src/widgets/withdraw_sheet.dart';
 
 /// Settings ("garage") — sound toggle + brand theme picker (the design's
 /// `GSettingsScreen`). Restyles the whole app live via [ThemeController].
@@ -52,96 +51,96 @@ class SettingsScreen extends StatelessWidget {
                 color: p.purple,
               ),
             ),
-          const SizedBox(height: 12),
-          _ToggleCard(
-            title: 'MUSIC',
-            subtitle: 'Race loop + win / loss jingles.',
-            on: tc.musicOn,
-            onToggle: () {
-              final next = !tc.musicOn;
-              unawaited(tc.setMusic(on: next));
-              unawaited(music.setEnabled(on: next));
-              if (next) {
-                music.menu();
-              } else {
+            const SizedBox(height: 12),
+            _ToggleCard(
+              title: 'MUSIC',
+              subtitle: 'Race loop + win / loss jingles.',
+              on: tc.musicOn,
+              onToggle: () {
+                final next = !tc.musicOn;
+                unawaited(tc.setMusic(on: next));
+                unawaited(music.setEnabled(on: next));
+                if (next) {
+                  unawaited(music.startMenuLoop());
+                } else {
+                  sfx.toggle();
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+            _ToggleCard(
+              title: 'SOUND FX',
+              subtitle: 'Clicks, coin pops, spin-out skid.',
+              on: tc.sfxOn,
+              onToggle: () {
+                final next = !tc.sfxOn;
+                unawaited(tc.setSfx(on: next));
+                unawaited(sfx.setEnabled(on: next));
                 sfx.toggle();
-              }
-            },
-          ),
-          const SizedBox(height: 10),
-          _ToggleCard(
-            title: 'SOUND FX',
-            subtitle: 'Clicks, coin pops, spin-out skid.',
-            on: tc.sfxOn,
-            onToggle: () {
-              final next = !tc.sfxOn;
-              unawaited(tc.setSfx(on: next));
-              unawaited(sfx.setEnabled(on: next));
-              sfx.toggle();
-            },
-          ),
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 10),
-            child: Text(
-              'RIDE MODE',
-              style: displayStyle(
-                size: 13,
-                color: p.white,
-                letterSpacing: 1.3,
-                shadow: p.ink,
-                shadowDy: 1.5,
+              },
+            ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.only(left: 2, bottom: 10),
+              child: Text(
+                'RIDE MODE',
+                style: displayStyle(
+                  size: 13,
+                  color: p.white,
+                  letterSpacing: 1.3,
+                  shadow: p.ink,
+                  shadowDy: 1.5,
+                ),
               ),
             ),
-          ),
-          _ToggleCard(
-            title: wallet.isConnected ? 'LIVE · MAINNET' : 'PRACTICE',
-            subtitle: wallet.isConnected
-                ? 'Real funds on mainnet · ${wallet.ownerShort}'
-                : 'Fake funds vs the real mainnet market.',
-            on: wallet.isConnected,
-            onToggle: () {
-              sfx.toggle();
-              if (wallet.isConnected) {
-                unawaited(wallet.disconnect());
-              } else {
-                unawaited(showConnectSheet(context));
-              }
-            },
-          ),
-          const SizedBox(height: 10),
-          const _FundsCard(),
-          const _ReclaimCard(),
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 10),
-            child: Text(
-              'BRAND THEME',
-              style: displayStyle(
-                size: 13,
-                color: p.white,
-                letterSpacing: 1.3,
-                shadow: p.ink,
-                shadowDy: 1.5,
+            _ToggleCard(
+              title: wallet.isConnected ? 'LIVE · MAINNET' : 'PRACTICE',
+              subtitle: wallet.isConnected
+                  ? 'Real funds on mainnet · ${wallet.ownerShort}'
+                  : 'Fake funds vs the real mainnet market.',
+              on: wallet.isConnected,
+              onToggle: () {
+                sfx.toggle();
+                if (wallet.isConnected) {
+                  unawaited(wallet.disconnect());
+                } else {
+                  unawaited(showConnectSheet(context));
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+            const _FundsCard(),
+            const _ReclaimCard(),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.only(left: 2, bottom: 10),
+              child: Text(
+                'BRAND THEME',
+                style: displayStyle(
+                  size: 13,
+                  color: p.white,
+                  letterSpacing: 1.3,
+                  shadow: p.ink,
+                  shadowDy: 1.5,
+                ),
               ),
             ),
-          ),
-          _ThemeGrid(activeKey: tc.palette.key),
-          const SizedBox(height: 12),
-          ChunkyCard(
-            color: const Color(0xFFFFF1D6),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Text(
-              'Themes restyle the whole app to a Solana-ecosystem brand. '
-              'Music + SFX are CC0 Kenney packs — toggle each independently.',
-              style: bodyStyle(
-                size: 10.5,
-                color: shade(p.ink, 0.2),
-                weight: FontWeight.w800,
-                height: 1.5,
+            _ThemeDropdown(activeKey: tc.palette.key, activeLabel: tc.palette.label),
+            const SizedBox(height: 12),
+            ChunkyCard(
+              color: const Color(0xFFFFF1D6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Text(
+                'Themes restyle the whole app to a Solana-ecosystem brand. SFX are '
+                'CC0 Kenney; music by SoundSurfer & Viacheslav Starostin (Pixabay).',
+                style: bodyStyle(
+                  size: 10.5,
+                  color: shade(p.ink, 0.2),
+                  weight: FontWeight.w800,
+                  height: 1.5,
+                ),
               ),
             ),
-          ),
           ],
         ),
       ),
@@ -160,9 +159,6 @@ class _FundsCard extends StatefulWidget {
 }
 
 class _FundsCardState extends State<_FundsCard> {
-  bool _busy = false;
-  String? _progress;
-
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -191,8 +187,13 @@ class _FundsCardState extends State<_FundsCard> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Wallet · ${wallet.usdcUi.toStringAsFixed(2)} USDC · ${wallet.solUi.toStringAsFixed(3)} SOL',
-            style: bodyStyle(size: 12.5, color: p.ink, weight: FontWeight.w800),
+            'Flash fuel · ${wallet.usdcUi.toStringAsFixed(2)} USDC',
+            style: bodyStyle(size: 13, color: p.ink, weight: FontWeight.w800),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Wallet · ${wallet.walletUsdcUi.toStringAsFixed(2)} USDC · ${wallet.solUi.toStringAsFixed(3)} SOL gas',
+            style: bodyStyle(size: 11.5, color: shade(p.ink, 0.3), weight: FontWeight.w800),
           ),
           if (wallet.networkError != null) ...[
             const SizedBox(height: 6),
@@ -206,103 +207,42 @@ class _FundsCardState extends State<_FundsCard> {
             children: [
               Expanded(
                 child: ChunkyButton(
-                  label: _busy ? '…' : r'FUND $11',
+                  label: 'FUND',
                   color: p.green,
                   sfxName: 'confirm',
-                  onTap: () {
-                    if (!_busy) unawaited(_fund(wallet));
-                  },
+                  onTap: () => unawaited(showFundSheet(context)),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: ChunkyButton(
-                  label: _busy ? '…' : 'CASH OUT',
+                  label: 'CASH OUT',
                   color: p.cyan,
                   sfxName: 'back',
-                  onTap: () {
-                    if (!_busy) unawaited(_cashOut(wallet));
-                  },
+                  onTap: () => unawaited(showWithdrawSheet(context)),
                 ),
               ),
             ],
           ),
-          if (_progress != null) ...[
-            const SizedBox(height: 8),
-            Text(_progress!, style: bodyStyle(size: 11, color: shade(p.ink, 0.4))),
-          ],
           const SizedBox(height: 6),
           Text(
             r'Deposit USDC to your self-custodial Flash basket to ride for real (min $11). '
             'Cash out anytime — Throtl never holds your funds.',
             style: bodyStyle(size: 10.5, color: shade(p.ink, 0.4)),
           ),
+          const SizedBox(height: 12),
+          ChunkyButton(
+            label: 'LOG OUT',
+            color: p.red,
+            sfxName: 'back',
+            onTap: () {
+              sfx.toggle();
+              unawaited(wallet.disconnect());
+            },
+          ),
         ],
       ),
     );
-  }
-
-  Future<void> _fund(WalletController wallet) async {
-    // Flash collateral is USDC, not SOL. Without USDC the deposit can't even
-    // simulate ("transaction couldn't be simulated"), so say so plainly.
-    if (wallet.usdc6 < 11000000) {
-      setState(
-        () => _progress =
-            r'Need ≥ $11 USDC in your wallet first — Flash trades use USDC, not SOL. '
-            'You have ${wallet.usdcUi.toStringAsFixed(2)} USDC. Swap some SOL→USDC, then fund.',
-      );
-      return;
-    }
-    final api = FlashApi();
-    final base = RpcClient(wallet.network.baseRpc);
-    setState(() {
-      _busy = true;
-      _progress = 'starting…';
-    });
-    try {
-      await flashDeposit(
-        wallet,
-        api,
-        base,
-        11000000,
-        onStep: (s) {
-          if (mounted) setState(() => _progress = s);
-        },
-      );
-      if (mounted) setState(() => _progress = r'Funded ✓ — $11 in your Flash basket.');
-      unawaited(wallet.refreshBalances());
-    } on Object catch (e) {
-      if (mounted) setState(() => _progress = 'Fund failed: $e');
-    } finally {
-      api.close();
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _cashOut(WalletController wallet) async {
-    final api = FlashApi();
-    final base = RpcClient(wallet.network.baseRpc);
-    setState(() {
-      _busy = true;
-      _progress = 'starting…';
-    });
-    try {
-      await flashWithdraw(
-        wallet,
-        api,
-        base,
-        onStep: (s) {
-          if (mounted) setState(() => _progress = s);
-        },
-      );
-      if (mounted) setState(() => _progress = 'Cashed out ✓ — funds back in your wallet.');
-      unawaited(wallet.refreshBalances());
-    } on Object catch (e) {
-      if (mounted) setState(() => _progress = 'Cash out failed: $e');
-    } finally {
-      api.close();
-      if (mounted) setState(() => _busy = false);
-    }
   }
 }
 
@@ -507,6 +447,91 @@ class _TogglePill extends StatelessWidget {
 }
 
 /// 2-column grid of theme cards, one per [kThemeOrder] key.
+/// Collapsible brand-theme picker — shows the active theme; tap to drop open the
+/// full grid and pick another. Default collapsed so Settings stays compact.
+class _ThemeDropdown extends StatefulWidget {
+  const _ThemeDropdown({required this.activeKey, required this.activeLabel});
+
+  final String activeKey;
+  final String activeLabel;
+
+  @override
+  State<_ThemeDropdown> createState() => _ThemeDropdownState();
+}
+
+class _ThemeDropdownState extends State<_ThemeDropdown> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final swatches = [p.orange, p.yellow, p.purple, p.green];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GestureDetector(
+          onTap: () {
+            sfx.open();
+            setState(() => _open = !_open);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: p.cream,
+              border: Border.all(color: p.ink, width: 3),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: hardShadow(p.ink, dy: 4),
+            ),
+            child: Row(
+              children: [
+                for (final c in swatches) ...[
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: c,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: p.ink, width: 1.5),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                ],
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    widget.activeLabel,
+                    style: displayStyle(
+                      size: 14,
+                      color: p.ink,
+                      shadowDy: 0,
+                      shadow: const Color(0x00000000),
+                    ),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _open ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(Icons.keyboard_arrow_down, color: p.inkSoft),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: _ThemeGrid(activeKey: widget.activeKey),
+          ),
+          crossFadeState: _open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 220),
+          sizeCurve: Curves.easeOutCubic,
+        ),
+      ],
+    );
+  }
+}
+
 class _ThemeGrid extends StatelessWidget {
   const _ThemeGrid({required this.activeKey});
 

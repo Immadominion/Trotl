@@ -3,32 +3,69 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/session_history.dart';
 import 'package:throtl/src/widgets/balance_pill.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 
-/// The "Paddock" screen — race history plus the onchain proof stream.
-///
-/// Ports the design's `GHistoryScreen` (past sessions list) together with its
-/// `GLiveExplorer` (the live tick / COMMIT stream card). The explorer has no
-/// data-feed prop here, so it synthesises rows on a timer instead.
-class PaddockScreen extends StatelessWidget {
+/// The "Paddock" screen — the player's REAL race history (every pit-in, newest
+/// first, from [SessionHistoryStore]) plus the live onchain proof stream.
+class PaddockScreen extends StatefulWidget {
   const PaddockScreen({required this.onBack, required this.onRace, super.key});
 
   final VoidCallback onBack;
   final VoidCallback onRace;
 
-  static const List<_Session> _sessions = [
-    _Session('TODAY 01:12', 38.42, 1284, '18.2x', '5gKx…2fQz'),
-    _Session('TODAY 00:36', -12.07, 644, '20.0x', 'bN2s…xW9d'),
-    _Session('YESTERDAY', 21.65, 2031, '12.6x', 'Jh7q…pR4m'),
-    _Session('YESTERDAY', 4.02, 311, '6.4x', 'tY3k…aL8e'),
-    _Session('JUN 11', -27.15, 980, '19.1x', 'qF6c…mD2v'),
-  ];
+  @override
+  State<PaddockScreen> createState() => _PaddockScreenState();
+}
+
+class _PaddockScreenState extends State<PaddockScreen> {
+  List<RaceSession> _sessions = const [];
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final s = await SessionHistoryStore.list();
+    if (mounted) {
+      setState(() {
+        _sessions = s;
+        _loaded = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     return GameScaffold(
+      bottomBar: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: ChunkyButton(
+              label: 'BACK',
+              color: p.purple,
+              onTap: widget.onBack,
+              sfxName: 'back',
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 2,
+            child: ChunkyButton(
+              label: 'NEW SESSION',
+              color: p.orange,
+              big: true,
+              onTap: widget.onRace,
+            ),
+          ),
+        ],
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -54,36 +91,41 @@ class PaddockScreen extends StatelessWidget {
             const SizedBox(height: 11),
             const _LiveExplorer(),
             const SizedBox(height: 11),
-            for (final session in _sessions) ...[
-              _SessionRow(session: session),
-              const SizedBox(height: 8),
-            ],
-            const SizedBox(height: 3),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: ChunkyButton(
-                    label: 'BACK',
-                    color: p.purple,
-                    onTap: onBack,
-                    sfxName: 'back',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: ChunkyButton(
-                    label: 'NEW SESSION',
-                    color: p.orange,
-                    big: true,
-                    onTap: onRace,
-                  ),
-                ),
+            if (_loaded && _sessions.isEmpty)
+              _emptyState(p)
+            else
+              for (final session in _sessions) ...[
+                _SessionRow(session: session),
+                const SizedBox(height: 8),
               ],
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _emptyState(ThrotlPalette p) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+      decoration: BoxDecoration(
+        color: p.cream,
+        border: Border.all(color: p.ink, width: 3),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: hardShadow(p.ink, dy: 4),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'No rides yet',
+            style: displayStyle(size: 18, color: p.ink, shadowDy: 0).copyWith(shadows: const []),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Your race history shows up here after your first pit-in. Hit NEW SESSION to ride.',
+            textAlign: TextAlign.center,
+            style: bodyStyle(size: 12, color: shade(p.ink, 0.35)),
+          ),
+        ],
       ),
     );
   }
@@ -232,12 +274,12 @@ class _TickRow extends StatelessWidget {
 class _SessionRow extends StatelessWidget {
   const _SessionRow({required this.session});
 
-  final _Session session;
+  final RaceSession session;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final positive = session.pnl >= 0;
+    final positive = session.win;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
@@ -269,7 +311,7 @@ class _SessionRow extends StatelessWidget {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        _fmtMoney(session.pnl),
+                        _fmtMoney6(session.pnl6),
                         style: displayStyle(
                           size: 15,
                           color: positive ? p.greenDeep : p.redDeep,
@@ -278,7 +320,7 @@ class _SessionRow extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        session.when,
+                        _fmtWhen(session.tsMs),
                         style: bodyStyle(
                           size: 10,
                           color: p.inkSoft,
@@ -290,7 +332,7 @@ class _SessionRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_fmtThousands(session.ticks)} ticks · peak ${session.peak}',
+                    '${_fmtThousands(session.ticks)} ticks · peak ${session.peakLev.toStringAsFixed(1)}x',
                     style: bodyStyle(
                       size: 10,
                       color: shade(p.ink, 0.35),
@@ -306,15 +348,15 @@ class _SessionRow extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE9F0FF),
+                  color: session.live ? const Color(0xFFDCF5E4) : const Color(0xFFE9F0FF),
                   border: Border.all(color: p.ink, width: 2.5),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 child: Text(
-                  '${session.sig} ↗',
+                  session.live ? 'LIVE' : 'PRACTICE',
                   style: bodyStyle(
                     size: 9.5,
-                    color: p.inkSoft,
+                    color: session.live ? p.greenDeep : p.inkSoft,
                     weight: FontWeight.w800,
                     height: 1.2,
                   ),
@@ -329,9 +371,38 @@ class _SessionRow extends StatelessWidget {
 }
 
 /// Formats PnL the design way: `+$38.42` / `−$12.07` (U+2212 minus sign).
-String _fmtMoney(double value) {
+String _fmtMoney6(int v6) {
+  final value = v6 / 1e6;
   final sign = value >= 0 ? '+' : '−';
   return '$sign\$${value.abs().toStringAsFixed(2)}';
+}
+
+/// `TODAY 14:08` / `YESTERDAY 09:31` / `JUN 11` from an epoch-millis timestamp.
+String _fmtWhen(int tsMs) {
+  final dt = DateTime.fromMillisecondsSinceEpoch(tsMs);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(dt.year, dt.month, dt.day);
+  final diff = today.difference(day).inDays;
+  final hh = dt.hour.toString().padLeft(2, '0');
+  final mm = dt.minute.toString().padLeft(2, '0');
+  if (diff <= 0) return 'TODAY $hh:$mm';
+  if (diff == 1) return 'YESTERDAY $hh:$mm';
+  const months = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
+  return '${months[dt.month - 1]} ${dt.day}';
 }
 
 /// Inserts thousands separators, e.g. `2031` → `2,031` (no `intl` dependency).
@@ -359,16 +430,4 @@ class _Tick {
   final String sig;
   final String price;
   final String latency;
-}
-
-/// One past race session.
-@immutable
-class _Session {
-  const _Session(this.when, this.pnl, this.ticks, this.peak, this.sig);
-
-  final String when;
-  final double pnl;
-  final int ticks;
-  final String peak;
-  final String sig;
 }

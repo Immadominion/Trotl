@@ -22,9 +22,16 @@ Future<void> main() async {
   // (e.g. a Helius dedicated subdomain on Starlink) self-heals to a reachable one.
   await resolveRpc();
   final prefs = await SharedPreferences.getInstance();
+  final seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
   final theme = ThemeController(prefs);
   final wallet = WalletController();
   await sfx.init(enabled: theme.sfxOn);
   await music.init(enabled: theme.musicOn);
-  runApp(ThrotlApp(themeController: theme, walletController: wallet));
+  runApp(
+    ThrotlApp(
+      themeController: theme,
+      walletController: wallet,
+      showOnboarding: !seenOnboarding,
+    ),
+  );
 }

@@ -42,6 +42,7 @@ class RideConfig {
     required this.lossFloor6,
     required this.marketId,
     this.gripMode = GripMode.hold,
+    this.bandBps = 250,
   }) : assert(fuelUsd6 > 0, 'fuel must be positive'),
        assert(maxLevBps >= 10000 && maxLevBps <= 100000, 'lev in [1x,10x]'),
        assert(lossFloor6 < 0, 'floor must be a negative bound');
@@ -51,6 +52,11 @@ class RideConfig {
   final int lossFloor6;
   final int marketId;
   final GripMode gripMode;
+
+  /// Reconciler hysteresis band (bps of fuel×lev) — how far the settled position
+  /// must drift from the lever target before a trade fires. The pit-bay "GRIP"
+  /// control sets this: tighter = more trades (more settlement txs), looser = fewer.
+  final int bandBps;
 
   /// Maximum absolute notional this ride can ever hold = fuel × maxLev. The hard local cap the
   /// reconciler clamps to regardless of what the (operator-trusted-only-for-feel) ER reports.

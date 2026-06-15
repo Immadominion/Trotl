@@ -61,7 +61,11 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
   // Default to the simulated venue; a real-money go-live ride swaps in a
   // session-signed RealFlashGateway during _arm (after minting the Flash session).
   FlashGateway _gateway = SimGateway();
-  late RideExecutor _executor = RideExecutor(ride: config, gateway: _gateway);
+  late RideExecutor _executor = RideExecutor(
+    ride: config,
+    gateway: _gateway,
+    config: ReconcileConfig(bandBps: config.bandBps),
+  );
 
   Ed25519HDKeyPair? _session;
   Ed25519HDPublicKey? _ride;
@@ -290,25 +294,46 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
         commitFrequencyMs: 30000,
         validator: Ed25519HDPublicKey.fromBase58(near.identity),
       );
+      // The gasless Flash session key, folded into the SAME tx — so arming is ONE
+      // signature, not two. A separate second tx was failing wallet simulation
+      // ("can't simulate after the first transaction" — both Seed Vault and
+      // Solflare): the wallet simulates tx #2 against a chain state that doesn't
+      // yet include tx #1. In ONE tx the instructions run in order, so
+      // init → delegate → session all simulate cleanly together, and it's atomic
+      // (either the whole ride arms or nothing is created).
+      final flashSession = await Ed25519HDKeyPair.random();
+      final flashValidUntil =
+          DateTime.now().add(const Duration(hours: 2)).millisecondsSinceEpoch ~/ 1000;
+      final sessionIx = await createSessionV2Ix(
+        owner: owner,
+        sessionSigner: flashSession.publicKey,
+        validUntilUnix: flashValidUntil,
+      );
 
-      // OWNER signs init+delegate via MWA (the single wallet popup of the ride).
+      // OWNER signs init + delegate + create_session_v2 via MWA — the single popup of
+      // the ride. This tx has TWO required signers: the owner (MWA fills it) and the
+      // Flash `session_signer` (the in-memory ephemeral key). MWA only fills the owner
+      // slot, so after signing we co-sign the session_signer slot ourselves, THEN
+      // submit. (A `sigVerify:false` simulation passes without the second signature,
+      // which is why this gap stayed hidden until real submission.)
       final bh = (await bhF).value;
       final unsignedTx = buildUnsignedLegacyTx(
-        instructions: [initIx, delIx],
+        instructions: [initIx, delIx, sessionIx],
         recentBlockhash: bh.blockhash,
         feePayer: owner,
       );
-      _setArm('Confirm in your wallet — this opens your ride session on-chain.');
-      // Sign-only via MWA + submit ourselves (no wallet simulation against its own RPC).
-      final sigs = await wallet.signAndSubmit([unsignedTx], base);
+      _setArm('Confirm in your wallet — one signature opens your ride on-chain.');
+      // Sign-only via MWA (no wallet submit → no wallet-side simulation surprises),
+      // inject the ephemeral session signature, then submit ourselves.
+      final ownerSigned = (await wallet.signTransactions([unsignedTx])).first;
+      final fullySigned = await coSignSessionKey(ownerSigned, flashSession);
       _setArm('Confirming on Solana…');
-      await _confirm(base, sigs.first);
+      final sig = await wallet.submitSigned(fullySigned, base);
+      await _confirm(base, sig);
 
-      // Connected = real money: mint a gasless Flash session key (the one extra owner
-      // popup) and swap the SimGateway for a session-signed RealFlashGateway. After
-      // this, every Flash trade is signed in-memory by the ephemeral key — no popups.
-      _setArm('Confirm the Flash session key in your wallet…');
-      await _armFlashSession(owner, base);
+      // The session key was authorized in the tx above — swap the SimGateway for the
+      // session-signed RealFlashGateway (every Flash trade now signs in-memory, no popups).
+      await _setUpFlashGateway(owner, flashSession);
 
       _setArm('Handing your ride to the rollup…');
 
@@ -380,23 +405,10 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
 
   // Mint a Flash session key (owner-signed, base chain) and swap the SimGateway for a
   // session-signed RealFlashGateway — after this, Flash trades are gasless (no popups).
-  Future<void> _armFlashSession(Ed25519HDPublicKey owner, RpcClient base) async {
-    final flashSession = await Ed25519HDKeyPair.random();
-    final validUntil = DateTime.now().add(const Duration(hours: 2)).millisecondsSinceEpoch ~/ 1000;
-    final sessionIx = await createSessionV2Ix(
-      owner: owner,
-      sessionSigner: flashSession.publicKey,
-      validUntilUnix: validUntil,
-    );
-    final bh = (await base.getLatestBlockhash()).value;
-    final unsigned = buildUnsignedLegacyTx(
-      instructions: [sessionIx],
-      recentBlockhash: bh.blockhash,
-      feePayer: owner,
-    );
-    final sigs = await wallet.signAndSubmit([unsigned], base);
-    await _confirm(base, sigs.first);
-
+  /// Swap the SimGateway for the session-signed RealFlashGateway. The Flash session
+  /// key [flashSession] was already authorized inside the single arming tx (no extra
+  /// popup), so from here every Flash trade is signed in-memory by this ephemeral key.
+  Future<void> _setUpFlashGateway(Ed25519HDPublicKey owner, Ed25519HDKeyPair flashSession) async {
     final token = await sessionTokenV2Pda(sessionSigner: flashSession.publicKey, authority: owner);
     final erRpc = RpcClient(flashErRpc);
     _gateway = RealFlashGateway(
@@ -411,7 +423,11 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
         Market.byId(config.marketId).symbol,
       ),
     );
-    _executor = RideExecutor(ride: config, gateway: _gateway);
+    _executor = RideExecutor(
+      ride: config,
+      gateway: _gateway,
+      config: ReconcileConfig(bandBps: config.bandBps),
+    );
   }
 
   // ── the live RideSession echo → reconcile → bookkeeping ──────────────────
@@ -597,7 +613,8 @@ class LiveRideController extends ChangeNotifier implements RideEngine {
         unawaited(RentReclaimStore.add(ride.toBase58()));
         _setSettle(
           SettlePhase.done,
-          note: "Settled. The close wasn't confirmed — reclaim the ride rent anytime from Settings.",
+          note:
+              "Settled. The close wasn't confirmed — reclaim the ride rent anytime from Settings.",
         );
       } else {
         _setSettle(SettlePhase.failed, note: '$e');

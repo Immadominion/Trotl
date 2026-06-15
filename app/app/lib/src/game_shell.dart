@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:throtl/src/audio/sfx.dart';
 import 'package:throtl/src/engine/live_ride_controller.dart';
 import 'package:throtl/src/engine/price_feed.dart';
@@ -10,6 +11,7 @@ import 'package:throtl/src/screens/arming_screen.dart';
 import 'package:throtl/src/screens/countdown_screen.dart';
 import 'package:throtl/src/screens/garage_screen.dart';
 import 'package:throtl/src/screens/grid_screen.dart';
+import 'package:throtl/src/screens/onboarding_screen.dart';
 import 'package:throtl/src/screens/paddock_screen.dart';
 import 'package:throtl/src/screens/pit_bay_screen.dart';
 import 'package:throtl/src/screens/race_screen.dart';
@@ -17,11 +19,13 @@ import 'package:throtl/src/screens/results_screen.dart';
 import 'package:throtl/src/screens/season_screen.dart';
 import 'package:throtl/src/screens/settings_screen.dart';
 import 'package:throtl/src/screens/title_screen.dart';
+import 'package:throtl/src/util/session_history.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl_core/throtl_core.dart';
 
 /// The screens of the flow (matches the design's board map).
 enum ScreenId {
+  onboarding,
   title,
   garage,
   grid,
@@ -39,7 +43,10 @@ enum ScreenId {
 /// [RideController], the last [SessionStats]) and wires every screen's callbacks.
 /// Mirrors the design's `GFlowApp`.
 class GameShell extends StatefulWidget {
-  const GameShell({super.key});
+  const GameShell({this.showOnboarding = false, super.key});
+
+  /// First launch (intro not yet seen) → open the onboarding before the title.
+  final bool showOnboarding;
 
   @override
   State<GameShell> createState() => _GameShellState();
@@ -54,14 +61,17 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
 
   int _fuelUsd6 = 250 * 1000000; // $250 default stake
   int _marketId = 0; // selected market (SOL default)
-  final int _maxLevBps = 50000; // 5x downforce default
+  int _maxLevBps = 50000; // 5x downforce default (editable on the grid)
   int _gripBandBps = 250;
 
   @override
   void initState() {
     super.initState();
+    if (widget.showOnboarding) _screen = ScreenId.onboarding;
     _feed = FlashPriceFeed()..start();
     WidgetsBinding.instance.addObserver(this);
+    // App-open ambience — the menu loop plays under every non-race screen.
+    unawaited(music.startMenuLoop());
   }
 
   @override
@@ -96,17 +106,25 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
 
   void _go(ScreenId s) => setState(() => _screen = s);
 
+  Future<void> _finishOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_seen', true);
+    if (mounted) _go(ScreenId.title);
+  }
+
   RideConfig _buildConfig() => RideConfig(
     fuelUsd6: _fuelUsd6,
     maxLevBps: _maxLevBps,
     lossFloor6: -(_fuelUsd6 * 0.8).round(),
     marketId: _marketId,
+    bandBps: _gripBandBps,
   );
 
-  void _arm(int fuelUsd6, int marketId) {
+  void _arm(int fuelUsd6, int marketId, int maxLevBps) {
     setState(() {
       _fuelUsd6 = fuelUsd6;
       _marketId = marketId;
+      _maxLevBps = maxLevBps;
     });
     final wallet = context.read<WalletController>();
     if (wallet.isConnected) {
@@ -164,12 +182,25 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
   void _pitIn(SessionStats stats) {
     _ride?.stop();
     sfx.engineStop();
-    unawaited(music.stopLoop());
+    // Back to menus → swap the race track out for the ambient loop.
+    unawaited(music.startMenuLoop());
     if (stats.realized6 >= 0) {
       sfx.pitWin();
     } else {
       sfx.pitLoss();
     }
+    // Record the ride in the real Paddock history (practice + live, tagged).
+    unawaited(
+      SessionHistoryStore.record(
+        RaceSession(
+          tsMs: DateTime.now().millisecondsSinceEpoch,
+          pnl6: stats.realized6,
+          ticks: stats.ticks,
+          peakLev: stats.peakLev,
+          live: _ride is LiveRideController,
+        ),
+      ),
+    );
     setState(() {
       _stats = stats;
       _screen = ScreenId.results;
@@ -180,6 +211,8 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
 
   Widget _current() {
     switch (_screen) {
+      case ScreenId.onboarding:
+        return OnboardingScreen(onFinish: _finishOnboarding);
       case ScreenId.title:
         return TitleScreen(
           feed: _feed,

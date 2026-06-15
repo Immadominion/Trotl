@@ -180,7 +180,7 @@ class RideController extends ChangeNotifier implements RideEngine {
     _executor = RideExecutor(
       ride: config,
       gateway: _gateway,
-      config: reconcile,
+      config: reconcile ?? ReconcileConfig(bandBps: config.bandBps),
     );
   }
 

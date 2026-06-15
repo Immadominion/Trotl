@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana_mobile_client/solana_mobile_client.dart';
 
 /// The Mobile Wallet Adapter edge — a thin, byte-level wrapper over
@@ -21,33 +22,49 @@ class MwaWallet {
 
   String? _publicKey;
   String? _authToken;
+  String? _walletName;
   String _authCluster = 'mainnet-beta';
 
   /// Connected wallet address (base58), or null.
   String? get publicKey => _publicKey;
 
+  /// The connected wallet's account label, if it gave one.
+  String? get walletName => _walletName;
+
   /// MWA is Android-only.
   bool get isAvailable => !kIsWeb && Platform.isAndroid;
 
-  /// Restore a persisted session (pubkey + token + cluster) at boot.
+  /// Restore a persisted session at boot. The pubkey / cluster / name live in
+  /// SharedPreferences (reliable across hot-restart, unlike the Android keystore
+  /// path that flutter_secure_storage uses); only the sensitive auth token stays
+  /// in secure storage. We just need the pubkey to show "connected" and read
+  /// balances — the next signature transparently re-auths if the token is gone.
   Future<void> loadPersisted() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _publicKey = prefs.getString('mwa_public_key');
+      _authCluster = prefs.getString('mwa_auth_cluster') ?? 'mainnet-beta';
+      _walletName = prefs.getString('mwa_wallet_name');
       _authToken = await _storage.read(key: 'mwa_auth_token');
-      _publicKey = await _storage.read(key: 'mwa_public_key');
-      _authCluster = await _storage.read(key: 'mwa_auth_cluster') ?? 'mainnet-beta';
     } on Object catch (e) {
       debugPrint('[MWA] loadPersisted failed ($e)');
     }
   }
 
-  void _persist() {
-    if (_authToken != null) {
-      _storage.write(key: 'mwa_auth_token', value: _authToken).ignore();
+  /// Persist the session. AWAITED (not fire-and-forget) so a hot-restart right
+  /// after connecting still finds the pubkey.
+  Future<void> _persist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pk = _publicKey;
+      final name = _walletName;
+      if (pk != null) await prefs.setString('mwa_public_key', pk);
+      await prefs.setString('mwa_auth_cluster', _authCluster);
+      if (name != null) await prefs.setString('mwa_wallet_name', name);
+      if (_authToken != null) await _storage.write(key: 'mwa_auth_token', value: _authToken);
+    } on Object catch (e) {
+      debugPrint('[MWA] persist failed ($e)');
     }
-    if (_publicKey != null) {
-      _storage.write(key: 'mwa_public_key', value: _publicKey).ignore();
-    }
-    _storage.write(key: 'mwa_auth_cluster', value: _authCluster).ignore();
   }
 
   /// Connect: launch the system wallet chooser and authorize on [cluster]
@@ -70,7 +87,8 @@ class MwaWallet {
       _publicKey = base58Encode(Uint8List.fromList(auth.publicKey));
       _authToken = auth.authToken;
       _authCluster = cluster;
-      _persist();
+      _walletName = auth.accountLabel;
+      await _persist();
       return MwaResult.ok(
         publicKey: _publicKey!,
         walletName: auth.accountLabel,
@@ -148,7 +166,7 @@ class MwaWallet {
         );
         if (reauth != null) {
           _authToken = reauth.authToken;
-          _persist();
+          await _persist();
           return;
         }
       } on Object catch (e) {
@@ -165,15 +183,22 @@ class MwaWallet {
     _authToken = auth.authToken;
     _publicKey = base58Encode(Uint8List.fromList(auth.publicKey));
     _authCluster = cluster;
-    _persist();
+    await _persist();
   }
 
   Future<void> disconnect() async {
     _publicKey = null;
     _authToken = null;
+    _walletName = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('mwa_public_key');
+      await prefs.remove('mwa_auth_cluster');
+      await prefs.remove('mwa_wallet_name');
+    } on Object {
+      // best-effort clear
+    }
     await _storage.delete(key: 'mwa_auth_token');
-    await _storage.delete(key: 'mwa_public_key');
-    await _storage.delete(key: 'mwa_auth_cluster');
   }
 }
 

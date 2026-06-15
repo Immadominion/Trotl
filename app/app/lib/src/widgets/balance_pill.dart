@@ -14,26 +14,30 @@ import 'package:throtl/src/widgets/chunky.dart';
 /// "reload" the cockpit was missing) — opening the funding sheet when you're
 /// connected but empty. Disconnected, it opens the connect sheet.
 class BalancePill extends StatelessWidget {
-  const BalancePill({this.onLongPress, super.key});
+  const BalancePill({this.onHistory, super.key});
 
-  /// Optional secondary action (the garage uses it to open the Paddock).
-  final VoidCallback? onLongPress;
+  /// Tapping the pill (when connected) opens the player's race history.
+  final VoidCallback? onHistory;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final wallet = context.watch<WalletController>();
     return GestureDetector(
-      onLongPress: onLongPress,
       onTap: () {
         if (!wallet.isConnected) {
           unawaited(showConnectSheet(context));
           return;
         }
         sfx.click();
-        unawaited(wallet.refreshBalances());
-        if (wallet.usdc6 == 0) unawaited(showFundingSheet(context));
+        onHistory?.call();
       },
+      onLongPress: wallet.isConnected
+          ? () {
+              sfx.click();
+              unawaited(wallet.refreshBalances());
+            }
+          : null,
       child: Stack(
         clipBehavior: Clip.none,
         children: [

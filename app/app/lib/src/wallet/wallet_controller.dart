@@ -5,6 +5,7 @@ import 'package:flash_client/flash_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:solana/solana.dart';
 import 'package:throtl/src/chain/network.dart';
+import 'package:throtl/src/wallet/flash_session.dart';
 import 'package:throtl/src/wallet/mwa_wallet.dart';
 
 /// Connection lifecycle for the UI.
@@ -31,6 +32,7 @@ class WalletController extends ChangeNotifier {
   String? _walletName;
   int _solLamports = 0;
   int _usdc6 = 0;
+  int _walletUsdc6 = 0;
   String? _netError;
   String? _error;
   bool _refreshing = false;
@@ -61,6 +63,11 @@ class WalletController extends ChangeNotifier {
   double get solUi => _solLamports / 1e9;
   double get usdcUi => _usdc6 / 1e6;
 
+  /// Spendable USDC sitting in the wallet itself (available to deposit) — distinct
+  /// from [usdcUi], the Flash fuel. Refreshed alongside the other balances.
+  int get walletUsdc6 => _walletUsdc6;
+  double get walletUsdcUi => _walletUsdc6 / 1e6;
+
   /// A balance read is in flight (drives the refresh spinner on the coin pill).
   bool get refreshing => _refreshing;
 
@@ -79,6 +86,7 @@ class WalletController extends ChangeNotifier {
       final pk = _mwa.publicKey;
       if (pk != null) {
         _owner = pk;
+        _walletName = _mwa.walletName;
         _status = WalletStatus.connected;
         notifyListeners();
         unawaited(refreshBalances());
@@ -127,6 +135,9 @@ class WalletController extends ChangeNotifier {
     return true;
   }
 
+  /// Fully clear the session so a different wallet can log in cleanly: stop the
+  /// poll, wipe the MWA token + persisted pubkey, and reset ALL per-wallet state
+  /// (balances, name, errors, ephemeral session key, in-flight flag).
   Future<void> disconnect() async {
     _stopPoll();
     await _mwa.disconnect();
@@ -134,6 +145,10 @@ class WalletController extends ChangeNotifier {
     _walletName = null;
     _solLamports = 0;
     _usdc6 = 0;
+    _walletUsdc6 = 0;
+    _netError = null;
+    _error = null;
+    _refreshing = false;
     _sessionKey = null;
     _status = WalletStatus.disconnected;
     notifyListeners();
@@ -171,7 +186,8 @@ class WalletController extends ChangeNotifier {
           } on Object catch (e) {
             lastErr = e;
             final s = '$e';
-            final transient = s.contains('Failed host lookup') ||
+            final transient =
+                s.contains('Failed host lookup') ||
                 s.contains('No address associated') ||
                 s.contains('SocketException') ||
                 s.contains('Connection closed') ||
@@ -191,6 +207,7 @@ class WalletController extends ChangeNotifier {
         }
         // ignore: only_throw_errors — re-surface the RPC's own error to the handler below
         if (lamports == null) throw lastErr ?? StateError('balance unavailable');
+        if (_owner != o) return; // wallet switched mid-read — drop stale values
         _solLamports = lamports;
         _netError = null; // a good read clears any prior network error
       } on Object catch (e) {
@@ -199,44 +216,81 @@ class WalletController extends ChangeNotifier {
         _netError = (s.contains('Failed host lookup') || s.contains('SocketException'))
             ? "Can't reach the network. Check the device's internet, and set "
                   'Private DNS → Off (Settings → Network → Private DNS).'
-            : (s.contains('-32504') || s.contains('504') || s.contains('429') || s.contains('timed out'))
-                ? 'RPC overloaded (timed out). Set your own endpoint: run with '
-                      '--dart-define=THROTL_RPC=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY'
-                : 'RPC unreachable — try another endpoint.';
+            : (s.contains('-32504') ||
+                  s.contains('504') ||
+                  s.contains('429') ||
+                  s.contains('timed out'))
+            ? 'RPC overloaded (timed out). Set your own endpoint: run with '
+                  '--dart-define=THROTL_RPC=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY'
+            : 'RPC unreachable — try another endpoint.';
       }
       try {
-        // For Flash trades, read the Flash basket balance (after funding)
-        // Falls back to wallet USDC if no basket yet
+        // Flash "fuel" = available collateral = deposit-ledger balance − basket
+        // debits + basket pendingCredits (research/flash.md §3). The deposit lives
+        // in the on-chain UserDepositLedger PDA — NOT the basket and NOT a wallet
+        // ATA — so a funded-but-not-yet-traded wallet must read the ledger directly
+        // or it shows $0. Verified on mainnet: ledger TVPZ… holds the 11 USDC.
+        final owner = Ed25519HDPublicKey.fromBase58(o);
+        final deposits = await flashLedgerBalanceRaw(rpc, owner, cfg.usdcMint);
+        var net = 0; // pendingCredits − debits, once a basket exists
+        final api = FlashApi();
         try {
-          final api = FlashApi();
           final state = await api.ownerState(o);
           final basketPubkey = state['basketPubkey'] as String?;
           if (basketPubkey != null && basketPubkey.isNotEmpty) {
-            final raw = await api.withdrawableRaw(basketPubkey, 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-            _usdc6 = raw;
-            api.close();
-            return; // use Flash basket balance, skip wallet USDC read
+            final raw = await api.rawBasket(basketPubkey);
+            net = computeBasketNetRaw(
+              raw['account'] as Map<String, dynamic>? ?? const {},
+              cfg.usdcMint,
+            );
           }
-          api.close();
         } on Object {
-          // Fall through to wallet USDC if Flash read fails
+          // no basket yet / API blip — the ledger deposit is still the right base
+        } finally {
+          api.close();
         }
-
-        // Fallback: read wallet USDC token account
+        final bal = deposits + net;
+        if (_owner != o) return; // wallet switched mid-read — drop stale values
+        _usdc6 = bal < 0 ? 0 : bal;
+      } on Object {
+        // Flash collateral read failed entirely (DNS/RPC) — keep the last good
+        // value rather than flashing a wrong $0; the next poll retries.
+      }
+      // Wallet USDC (what's available to deposit) — shown alongside Flash fuel.
+      try {
         final ata = await findAssociatedTokenAddress(
           owner: Ed25519HDPublicKey.fromBase58(o),
           mint: Ed25519HDPublicKey.fromBase58(cfg.usdcMint),
         );
         final t = await rpc.getTokenAccountBalance(ata.toBase58());
-        _usdc6 = int.tryParse(t.value.amount) ?? 0;
+        if (_owner == o) _walletUsdc6 = int.tryParse(t.value.amount) ?? 0;
       } on Object {
-        _usdc6 = 0; // no USDC token account yet
+        // no USDC ATA yet / read blip — leave the last value
       }
     } finally {
       // always release the flag — a stuck `_refreshing` would freeze every
       // future read (poll + manual + resume).
       _refreshing = false;
       notifyListeners();
+    }
+  }
+
+  /// The owner's spendable USDC sitting in their wallet (the ATA balance) — what's
+  /// available to DEPOSIT into Flash. Separate from [usdc6], which is the Flash
+  /// fuel (deposit-ledger) balance. Raw 6dp units; 0 if no ATA or the read fails.
+  Future<int> readWalletUsdc6() async {
+    final o = _owner;
+    if (o == null) return 0;
+    try {
+      final rpc = RpcClient(network.baseRpc);
+      final ata = await findAssociatedTokenAddress(
+        owner: Ed25519HDPublicKey.fromBase58(o),
+        mint: Ed25519HDPublicKey.fromBase58(network.usdcMint),
+      );
+      final t = await rpc.getTokenAccountBalance(ata.toBase58());
+      return int.tryParse(t.value.amount) ?? 0;
+    } on Object {
+      return 0;
     }
   }
 
@@ -274,6 +328,17 @@ class WalletController extends ChangeNotifier {
     return sigs;
   }
 
+  /// Submit an ALREADY-fully-signed tx via the same DNS-resilient retry path as
+  /// [signAndSubmit]. Used when a tx needs a second in-memory signer beyond the
+  /// wallet (e.g. the arming tx's Flash `session_signer`): MWA fills the owner slot
+  /// via [signTransactions], the ephemeral key co-signs ([coSignSessionKey]), then
+  /// the fully-signed bytes land here.
+  Future<String> submitSigned(
+    Uint8List signedTx,
+    RpcClient rpc, {
+    bool skipPreflight = false,
+  }) => _submitWithRetry(rpc, base64Encode(signedTx), skipPreflight);
+
   /// Broadcast a signed tx, surviving the **MWA resume-race**: the wallet
   /// round-trip backgrounds us, and on resume Android often hasn't re-bound the
   /// app's network yet, so the very first `getaddrinfo` throws "Failed host
@@ -291,7 +356,8 @@ class WalletController extends ChangeNotifier {
       } on Object catch (e) {
         lastErr = e;
         final s = '$e';
-        final retriable = s.contains('Failed host lookup') ||
+        final retriable =
+            s.contains('Failed host lookup') ||
             s.contains('No address associated') ||
             s.contains('SocketException') ||
             s.contains('Connection closed') ||

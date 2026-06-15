@@ -28,8 +28,9 @@ class GridScreen extends StatefulWidget {
 
   final int maxLevBps;
 
-  /// Called with the chosen collateral (usd6) + marketId when the user arms.
-  final void Function(int fuel6, int marketId) onArm;
+  /// Called with the chosen collateral (usd6) + marketId + max leverage (bps) when
+  /// the user arms.
+  final void Function(int fuel6, int marketId, int maxLevBps) onArm;
 
   /// Back to the garage (Home).
   final VoidCallback onBack;
@@ -49,6 +50,7 @@ class _GridScreenState extends State<GridScreen> {
 
   final int _marketId = 0; // SOL — the only live market
   int _fuelIdx = 1;
+  late int _levBps = widget.maxLevBps; // editable max leverage (downforce)
   bool _customOn = false;
   int? _customFuel6;
   final TextEditingController _customCtrl = TextEditingController();
@@ -131,7 +133,7 @@ class _GridScreenState extends State<GridScreen> {
           const Spacer(),
           _SlideToArm(
             enabled: canArm,
-            onArm: () => widget.onArm(selFuel, _marketId),
+            onArm: () => widget.onArm(selFuel, _marketId, _levBps),
           ),
         ],
       ),
@@ -334,9 +336,10 @@ class _GridScreenState extends State<GridScreen> {
     );
   }
 
-  // ── downforce (unchanged content) ───────────────────────────────────────────
+  // ── downforce: EDITABLE max leverage (2× / 5× / 10×) ─────────────────────────
   Widget _downforceCard(ThrotlPalette p) {
-    final maxLev = (widget.maxLevBps / 10000).toStringAsFixed(0);
+    const levs = <(String, int)>[('2×', 20000), ('5×', 50000), ('10×', 100000)];
+    final cur = (_levBps / 10000).toStringAsFixed(0);
     return ChunkyCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -355,7 +358,7 @@ class _GridScreenState extends State<GridScreen> {
                 ).copyWith(shadows: const []),
               ),
               Text(
-                '$maxLev×',
+                '$cur×',
                 style: displayStyle(size: 22, color: p.orangeDeep).copyWith(shadows: const []),
               ),
             ],
@@ -363,34 +366,47 @@ class _GridScreenState extends State<GridScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              for (var i = 0; i < 20; i++) ...[
-                Expanded(
-                  child: Container(
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: i < (widget.maxLevBps / 100000) * 20
-                          ? p.orange
-                          : const Color(0xFFEFE3CB),
-                      borderRadius: BorderRadius.circular(3),
-                      border: Border.all(
-                        color: i < (widget.maxLevBps / 100000) * 20
-                            ? p.ink
-                            : const Color(0xFFD9CCB2),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                ),
-                if (i < 19) const SizedBox(width: 3),
+              for (var i = 0; i < levs.length; i++) ...[
+                Expanded(child: _levChip(p, levs[i].$1, levs[i].$2)),
+                if (i < levs.length - 1) const SizedBox(width: 8),
               ],
             ],
           ),
           const SizedBox(height: 9),
           Text(
-            'Full throttle deflection = $maxLev×. Center detent = flat.',
+            'Full throttle = $cur×. Higher = a bigger position and faster wins AND losses. '
+            'Center = flat.',
             style: bodyStyle(size: 11, color: shade(p.ink, 0.35)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _levChip(ThrotlPalette p, String label, int bps) {
+    final on = _levBps == bps;
+    return GestureDetector(
+      onTap: () {
+        sfx.select();
+        setState(() => _levBps = bps);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: on ? candy(p.orange) : null,
+          color: on ? null : p.white,
+          border: Border.all(color: p.ink, width: 3),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: hardShadow(p.ink, dy: on ? 4 : 3),
+        ),
+        child: Text(
+          label,
+          style: displayStyle(
+            size: 14,
+            color: on ? p.white : p.inkSoft,
+          ).copyWith(shadows: const []),
+        ),
       ),
     );
   }

@@ -94,7 +94,8 @@ class _CarTurntableState extends State<CarTurntable> {
           shadowSoftness: 1,
           // hide model-viewer's default loading bar (the grey line that flashed
           // across on load) + any scrollbars; keep the canvas transparent
-          relatedCss: 'model-viewer::part(default-progress-bar){display:none !important;} '
+          relatedCss:
+              'model-viewer::part(default-progress-bar){display:none !important;} '
               '::-webkit-scrollbar{display:none !important;} '
               'html,body{overflow:hidden !important;background:transparent !important;}',
         ),

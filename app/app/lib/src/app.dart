@@ -13,11 +13,13 @@ class ThrotlApp extends StatelessWidget {
   const ThrotlApp({
     required this.themeController,
     required this.walletController,
+    this.showOnboarding = false,
     super.key,
   });
 
   final ThemeController themeController;
   final WalletController walletController;
+  final bool showOnboarding;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +32,7 @@ class ThrotlApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Throtl',
         theme: ThemeData(fontFamily: kFontBody, useMaterial3: true),
-        home: const PhoneFrame(child: GameShell()),
+        home: PhoneFrame(child: GameShell(showOnboarding: showOnboarding)),
       ),
     );
   }
