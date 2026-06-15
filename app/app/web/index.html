@@ -18,19 +18,26 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Throtl — the first analog exchange. Race the SOL-perp chart; the trade is real (Flash Trade on a MagicBlock Ephemeral Rollup).">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="throtl">
+  <meta name="apple-mobile-web-app-title" content="Throtl">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>throtl</title>
+  <title>Throtl — race the chart</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Browser-wallet bridge: @solana/web3.js (tx serialization) + the Throtl shim
+       (window.throtlWallet) the web wallet backend talks to. Both self-hosted
+       (same-origin, no CDN) and loaded before Flutter boots so the provider is
+       ready when the user taps connect. -->
+  <script src="solana-web3.iife.min.js"></script>
+  <script src="wallet.js"></script>
 </head>
 <body>
   <!--

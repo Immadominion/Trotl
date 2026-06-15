@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:solana/solana.dart';
 import 'package:throtl/src/chain/network.dart';
 import 'package:throtl/src/wallet/flash_session.dart';
-import 'package:throtl/src/wallet/mwa_wallet.dart';
+import 'package:throtl/src/wallet/wallet_backend.dart';
 
 /// Connection lifecycle for the UI.
 enum WalletStatus { disconnected, connecting, connected }
@@ -17,11 +17,11 @@ enum WalletStatus { disconnected, connecting, connected }
 /// existing `ThemeController` pattern. The on-chain ride orchestration (Phase C)
 /// reads `owner`, `sessionKey`, `network`, and signs owner txs via [signAndSend].
 class WalletController extends ChangeNotifier {
-  WalletController({MwaWallet? mwa}) : _mwa = mwa ?? MwaWallet() {
+  WalletController({WalletBackend? backend}) : _backend = backend ?? createWalletBackend() {
     _restore();
   }
 
-  final MwaWallet _mwa;
+  final WalletBackend _backend;
 
   // Mainnet is the only network — Flash Trade (the settlement venue) is
   // mainnet-only, so "devnet" was never a real ride target. The practice vs
@@ -49,7 +49,7 @@ class WalletController extends ChangeNotifier {
   WalletStatus get status => _status;
   bool get isConnected => _status == WalletStatus.connected && _owner != null;
   bool get isConnecting => _status == WalletStatus.connecting;
-  bool get mwaAvailable => _mwa.isAvailable;
+  bool get mwaAvailable => _backend.isAvailable;
   String? get owner => _owner;
   String? get walletName => _walletName;
   String? get error => _error;
@@ -82,11 +82,11 @@ class WalletController extends ChangeNotifier {
 
   void _restore() {
     unawaited(() async {
-      await _mwa.loadPersisted();
-      final pk = _mwa.publicKey;
+      await _backend.loadPersisted();
+      final pk = _backend.publicKey;
       if (pk != null) {
         _owner = pk;
-        _walletName = _mwa.walletName;
+        _walletName = _backend.walletName;
         _status = WalletStatus.connected;
         notifyListeners();
         unawaited(refreshBalances());
@@ -111,7 +111,7 @@ class WalletController extends ChangeNotifier {
 
   /// Connect via MWA on the active cluster.
   Future<bool> connect() async {
-    if (!_mwa.isAvailable) {
+    if (!_backend.isAvailable) {
       _error = 'Wallet connect needs an Android device with a wallet app';
       notifyListeners();
       return false;
@@ -119,7 +119,7 @@ class WalletController extends ChangeNotifier {
     _status = WalletStatus.connecting;
     _error = null;
     notifyListeners();
-    final res = await _mwa.connect(cluster: network.mwaCluster);
+    final res = await _backend.connect(cluster: network.mwaCluster);
     if (!res.success) {
       _status = _owner == null ? WalletStatus.disconnected : WalletStatus.connected;
       _error = res.error;
@@ -140,7 +140,7 @@ class WalletController extends ChangeNotifier {
   /// (balances, name, errors, ephemeral session key, in-flight flag).
   Future<void> disconnect() async {
     _stopPoll();
-    await _mwa.disconnect();
+    await _backend.disconnect();
     _owner = null;
     _walletName = null;
     _solLamports = 0;
@@ -304,11 +304,11 @@ class WalletController extends ChangeNotifier {
 
   /// Owner-signs + broadcasts txs (init/delegate/close) via MWA on the cluster.
   Future<List<String>> signAndSend(List<Uint8List> txs) =>
-      _mwa.signAndSend(txs, cluster: network.mwaCluster);
+      _backend.signAndSend(txs, cluster: network.mwaCluster);
 
   /// Owner-signs txs without broadcasting (app submits).
   Future<List<Uint8List>> signTransactions(List<Uint8List> txs) =>
-      _mwa.signTransactions(txs, cluster: network.mwaCluster);
+      _backend.signTransactions(txs, cluster: network.mwaCluster);
 
   /// The robust money path: owner-**sign only** via MWA (no wallet
   /// simulate/submit — so no flaky "Simulation failed, can't predict balance
@@ -320,7 +320,7 @@ class WalletController extends ChangeNotifier {
     RpcClient rpc, {
     bool skipPreflight = false,
   }) async {
-    final signed = await _mwa.signTransactions(txs, cluster: network.mwaCluster);
+    final signed = await _backend.signTransactions(txs, cluster: network.mwaCluster);
     final sigs = <String>[];
     for (final s in signed) {
       sigs.add(await _submitWithRetry(rpc, base64Encode(s), skipPreflight));

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:throtl/src/audio/sfx.dart';
@@ -110,8 +111,11 @@ class _ConnectSheetState extends State<_ConnectSheet> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
-                  'Wallet connect needs an Android device with a Solana wallet '
-                  '(Seed Vault / Phantom / Solflare). You can still ride in practice.',
+                  kIsWeb
+                      ? 'No browser wallet detected. Install Phantom, Solflare, or '
+                            'Backpack and reload to connect — or ride in practice now.'
+                      : 'Wallet connect needs an Android device with a Solana wallet '
+                            '(Seed Vault / Phantom / Solflare). You can still ride in practice.',
                   textAlign: TextAlign.center,
                   style: bodyStyle(size: 12, color: const Color(0xCCFFFFFF)),
                 ),

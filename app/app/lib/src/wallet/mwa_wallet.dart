@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana_mobile_client/solana_mobile_client.dart';
+import 'package:throtl/src/wallet/wallet_backend.dart';
 
 /// The Mobile Wallet Adapter edge — a thin, byte-level wrapper over
 /// `solana_mobile_client` (Android only; the Seeker target). Ported from the
@@ -12,7 +13,7 @@ import 'package:solana_mobile_client/solana_mobile_client.dart';
 /// `reauthorize` when the cluster is unchanged, full `authorize` otherwise; the
 /// wallet returns raw bytes, we base58 the pubkey/signatures ourselves. No
 /// `package:solana` dependency here — keeps this layer free of the chain SDK.
-class MwaWallet {
+class MwaWallet implements WalletBackend {
   MwaWallet({FlutterSecureStorage? storage}) : _storage = storage ?? const FlutterSecureStorage();
 
   static final Uri _identityUri = Uri.parse('https://throtl.fun');
@@ -26,12 +27,15 @@ class MwaWallet {
   String _authCluster = 'mainnet-beta';
 
   /// Connected wallet address (base58), or null.
+  @override
   String? get publicKey => _publicKey;
 
   /// The connected wallet's account label, if it gave one.
+  @override
   String? get walletName => _walletName;
 
   /// MWA is Android-only.
+  @override
   bool get isAvailable => !kIsWeb && Platform.isAndroid;
 
   /// Restore a persisted session at boot. The pubkey / cluster / name live in
@@ -39,6 +43,7 @@ class MwaWallet {
   /// path that flutter_secure_storage uses); only the sensitive auth token stays
   /// in secure storage. We just need the pubkey to show "connected" and read
   /// balances — the next signature transparently re-auths if the token is gone.
+  @override
   Future<void> loadPersisted() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -69,9 +74,10 @@ class MwaWallet {
 
   /// Connect: launch the system wallet chooser and authorize on [cluster]
   /// (`'devnet'` / `'mainnet-beta'`). Returns the base58 owner pubkey.
-  Future<MwaResult> connect({required String cluster}) async {
+  @override
+  Future<WalletConnectResult> connect({required String cluster}) async {
     if (!isAvailable) {
-      return MwaResult.fail('Wallet connect needs an Android device + wallet app');
+      return WalletConnectResult.fail('Wallet connect needs an Android device + wallet app');
     }
     final session = await LocalAssociationScenario.create();
     try {
@@ -83,20 +89,20 @@ class MwaWallet {
         iconUri: Uri.parse('icon.png'),
         cluster: cluster,
       );
-      if (auth == null) return MwaResult.fail('Authorization cancelled');
+      if (auth == null) return WalletConnectResult.fail('Authorization cancelled');
       _publicKey = base58Encode(Uint8List.fromList(auth.publicKey));
       _authToken = auth.authToken;
       _authCluster = cluster;
       _walletName = auth.accountLabel;
       await _persist();
-      return MwaResult.ok(
+      return WalletConnectResult.ok(
         publicKey: _publicKey!,
         walletName: auth.accountLabel,
       );
     } on PlatformException catch (e) {
-      return MwaResult.fail(e.message ?? e.code);
+      return WalletConnectResult.fail(e.message ?? e.code);
     } on Object catch (e) {
-      return MwaResult.fail(e.toString());
+      return WalletConnectResult.fail(e.toString());
     } finally {
       await session.close();
     }
@@ -105,6 +111,7 @@ class MwaWallet {
   /// Sign + send serialized transactions; returns base58 signatures. The OWNER
   /// signs (the wallet app broadcasts). Used for `init_ride`/`delegate_ride`
   /// and `close_ride` — the only owner-signed, wallet-popup moments per ride.
+  @override
   Future<List<String>> signAndSend(
     List<Uint8List> transactions, {
     required String cluster,
@@ -130,6 +137,7 @@ class MwaWallet {
 
   /// Sign (don't send) — for txs the app submits itself (bypasses the wallet's
   /// simulation, which can reject devnet / sponsored txs).
+  @override
   Future<List<Uint8List>> signTransactions(
     List<Uint8List> transactions, {
     required String cluster,
@@ -186,6 +194,7 @@ class MwaWallet {
     await _persist();
   }
 
+  @override
   Future<void> disconnect() async {
     _publicKey = null;
     _authToken = null;
@@ -200,19 +209,6 @@ class MwaWallet {
     }
     await _storage.delete(key: 'mwa_auth_token');
   }
-}
-
-/// Result of an MWA connect attempt.
-class MwaResult {
-  const MwaResult._({required this.success, this.publicKey, this.walletName, this.error});
-  factory MwaResult.ok({required String publicKey, String? walletName}) =>
-      MwaResult._(success: true, publicKey: publicKey, walletName: walletName);
-  factory MwaResult.fail(String error) => MwaResult._(success: false, error: error);
-
-  final bool success;
-  final String? publicKey;
-  final String? walletName;
-  final String? error;
 }
 
 class MwaException implements Exception {
