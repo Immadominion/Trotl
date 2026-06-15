@@ -5,6 +5,7 @@ import 'package:throtl/src/screens/share_overlay.dart';
 import 'package:throtl/src/theme/theme_controller.dart';
 import 'package:throtl/src/theme/tokens.dart';
 import 'package:throtl/src/util/format.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 
 /// 04 · Results — settle, real session stats, and the shareable receipt.
@@ -45,105 +46,50 @@ class _ResultsScreenState extends State<ResultsScreen> {
       children: [
         GameScaffold(
           background: p.paper,
+          fillWidth: true,
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-          bodyScrolls: true,
-          bottomBar: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ChunkyButton(
-                label: win ? '📸  FLEX THIS WIN' : '📸  SHARE THE SAVE',
-                color: win ? p.green : p.cyan,
-                big: true,
-                sfxName: 'open',
-                onTap: () => setState(() => _share = true),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+          bodyScrolls: !context.isWide,
+          bottomBar: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: ChunkyButton(
-                      label: 'RE-ARM',
-                      color: p.purple,
-                      sfxName: 'back',
-                      onTap: widget.onReplay,
-                    ),
+                  ChunkyButton(
+                    label: win ? '📸  FLEX THIS WIN' : '📸  SHARE THE SAVE',
+                    color: win ? p.green : p.cyan,
+                    big: true,
+                    sfxName: 'open',
+                    onTap: () => setState(() => _share = true),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: ChunkyButton(
-                      label: 'CLAIM & GARAGE',
-                      color: p.orange,
-                      onTap: widget.onClaim,
-                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: ChunkyButton(
+                          label: 'RE-ARM',
+                          color: p.purple,
+                          sfxName: 'back',
+                          onTap: widget.onReplay,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: ChunkyButton(
+                          label: 'CLAIM & GARAGE',
+                          color: p.orange,
+                          onTap: widget.onClaim,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Transform.rotate(
-                  angle: -0.035,
-                  child: BannerPlate(
-                    kicker: 'SESSION SETTLED',
-                    title: win ? 'RACE COMPLETE!' : 'ROUGH LAP!',
-                    color: win ? p.purple : p.red,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CoinIcon(size: 34),
-                  const SizedBox(width: 10),
-                  Text(
-                    fmtMoney6(st.realized6),
-                    style: displayStyle(
-                      size: 46,
-                      color: win ? p.greenDeep : p.redDeep,
-                      shadow: const Color(0x26000000),
-                      shadowDy: 3,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Center(
-                child: Text(
-                  'banked this session · settled on Flash Trade',
-                  style: bodyStyle(size: 12, color: p.inkSoft, weight: FontWeight.w800),
-                ),
-              ),
-              const SizedBox(height: 18),
-              _rowCard(p, 'Ticks streamed', groupInt(st.ticks)),
-              const SizedBox(height: 10),
-              _rowCard(p, 'Best combo', '×${st.bestStreak}', color: p.purple),
-              const SizedBox(height: 10),
-              _rowCard(p, 'Peak boost', '${st.peakLev.toStringAsFixed(1)}x', color: p.orangeDeep),
-              const SizedBox(height: 10),
-              _rowCard(p, 'Win rate', '${st.winRate}%', color: win ? p.greenDeep : p.redDeep),
-              const SizedBox(height: 12),
-              // The on-chain settle: for a live ride this tracks the real teardown
-              // (flatten → commit → undelegate → close); practice settles instantly.
-              if (widget.engine == null)
-                _settleCard(p, SettlePhase.done, null, null)
-              else
-                ListenableBuilder(
-                  listenable: widget.engine!,
-                  builder: (_, _) => _settleCard(
-                    p,
-                    widget.engine!.settlePhase,
-                    widget.engine!.settleNote,
-                    widget.engine!.settleSig,
-                  ),
-                ),
-            ],
-          ),
+          child: context.isWide ? _wideChild(p, win, st) : _phoneChild(p, win, st),
         ),
         if (_share)
           Positioned.fill(
@@ -153,6 +99,106 @@ class _ResultsScreenState extends State<ResultsScreen> {
               carAsset: theme.car.asset,
               tint: theme.tint,
               onClose: () => setState(() => _share = false),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Phone / portrait: headline above the stat cards (one scroll).
+  Widget _phoneChild(ThrotlPalette p, bool win, SessionStats st) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _headline(p, win, st),
+        const SizedBox(height: 18),
+        _metrics(p, win, st),
+      ],
+    );
+  }
+
+  /// Wide (iPad landscape / desktop): the headline beside the stat cards — a
+  /// landscape receipt instead of one tall centred column.
+  Widget _wideChild(ThrotlPalette p, bool win, SessionStats st) {
+    return Row(
+      children: [
+        Expanded(child: Center(child: _headline(p, win, st))),
+        const SizedBox(width: 28),
+        Expanded(
+          child: Center(child: SingleChildScrollView(child: _metrics(p, win, st))),
+        ),
+      ],
+    );
+  }
+
+  Widget _headline(ThrotlPalette p, bool win, SessionStats st) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Transform.rotate(
+            angle: -0.035,
+            child: BannerPlate(
+              kicker: 'SESSION SETTLED',
+              title: win ? 'RACE COMPLETE!' : 'ROUGH LAP!',
+              color: win ? p.purple : p.red,
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CoinIcon(size: 34),
+            const SizedBox(width: 10),
+            Text(
+              fmtMoney6(st.realized6),
+              style: displayStyle(
+                size: 46,
+                color: win ? p.greenDeep : p.redDeep,
+                shadow: const Color(0x26000000),
+                shadowDy: 3,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Center(
+          child: Text(
+            'banked this session · settled on Flash Trade',
+            style: bodyStyle(size: 12, color: p.inkSoft, weight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _metrics(ThrotlPalette p, bool win, SessionStats st) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _rowCard(p, 'Ticks streamed', groupInt(st.ticks)),
+        const SizedBox(height: 10),
+        _rowCard(p, 'Best combo', '×${st.bestStreak}', color: p.purple),
+        const SizedBox(height: 10),
+        _rowCard(p, 'Peak boost', '${st.peakLev.toStringAsFixed(1)}x', color: p.orangeDeep),
+        const SizedBox(height: 10),
+        _rowCard(p, 'Win rate', '${st.winRate}%', color: win ? p.greenDeep : p.redDeep),
+        const SizedBox(height: 12),
+        // The on-chain settle: for a live ride this tracks the real teardown
+        // (flatten → commit → undelegate → close); practice settles instantly.
+        if (widget.engine == null)
+          _settleCard(p, SettlePhase.done, null, null)
+        else
+          ListenableBuilder(
+            listenable: widget.engine!,
+            builder: (_, _) => _settleCard(
+              p,
+              widget.engine!.settlePhase,
+              widget.engine!.settleNote,
+              widget.engine!.settleSig,
             ),
           ),
       ],
