@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:throtl/src/widgets/car_sprite.dart';
 
 /// The garage showroom car — the real Kenney GLB rendered **live** and
 /// auto-rotating (the design's three.js `CarStage`, in a WebView via
@@ -63,6 +65,21 @@ class _CarTurntableState extends State<CarTurntable> {
   @override
   Widget build(BuildContext context) {
     final poster = widget.poster;
+    // ON WEB: model_viewer_plus mounts the model in an iframe that loads the
+    // <model-viewer> module + resolves the GLB as a relative URL — unreliable on
+    // web (the showroom car came up blank). Render the pre-rendered side sprite
+    // instead — the same floating [CarSprite] the title/onboarding use — so the
+    // garage car ALWAYS shows, sized to fill the turntable bay. (Mobile keeps the
+    // live, drag-to-spin 3D turntable below.)
+    if (kIsWeb) {
+      if (poster == null) return const SizedBox.shrink();
+      return LayoutBuilder(
+        builder: (context, c) {
+          final h = c.maxHeight.isFinite && c.maxHeight > 0 ? c.maxHeight : 240.0;
+          return Center(child: CarSprite(asset: poster, height: h, widthFactor: 0.92));
+        },
+      );
+    }
     // webview_flutter has no implementation under `flutter test`, so the live
     // viewer can't mount there — fall back to the poster sprite in tests.
     final inTest = WidgetsBinding.instance.runtimeType.toString().contains('Test');

@@ -72,10 +72,17 @@ class MwaWallet implements WalletBackend {
     }
   }
 
-  /// Connect: launch the system wallet chooser and authorize on [cluster]
-  /// (`'devnet'` / `'mainnet-beta'`). Returns the base58 owner pubkey.
+  /// On mobile the OS shows its own wallet chooser, so there's a single logical
+  /// entry — selection happens in that system sheet, not ours.
   @override
-  Future<WalletConnectResult> connect({required String cluster}) async {
+  Future<List<WalletOption>> listWallets() async =>
+      isAvailable ? const [WalletOption(id: 'mwa', name: 'Wallet app')] : const [];
+
+  /// Connect: launch the system wallet chooser and authorize on [cluster]
+  /// (`'devnet'` / `'mainnet-beta'`). Returns the base58 owner pubkey. [walletId]
+  /// is ignored — the Android wallet chooser does the picking.
+  @override
+  Future<WalletConnectResult> connect({required String cluster, String? walletId}) async {
     if (!isAvailable) {
       return WalletConnectResult.fail('Wallet connect needs an Android device + wallet app');
     }

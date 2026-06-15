@@ -36,6 +36,7 @@ dependencies:
   http: ^1.2.2 # guardian read APIs (season / paddock / share / price)
   model_viewer_plus: ^1.10.0 # live 3D garage turntable — auto-rotating GLB (the design's three.js, in a WebView)
   permission_handler: ^12.0.3 # request permissions for MWA wallet signing
+  url_launcher: ^6.3.1 # open external links (APK / demo / GitHub) from the web hero panel
 
   # ── wallet / chain ──
   solana: ^0.32.0 # RpcClient (balances), Ed25519HDPublicKey, ATA derivation

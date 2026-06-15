@@ -44,7 +44,23 @@ class WebWallet implements WalletBackend {
   }
 
   @override
-  Future<WalletConnectResult> connect({required String cluster}) async {
+  Future<List<WalletOption>> listWallets() async {
+    final s = _shim;
+    if (s == null) return const [];
+    try {
+      final list = jsonDecode(s.listWallets()) as List<dynamic>;
+      return [
+        for (final e in list)
+          if (e is Map)
+            WalletOption(id: '${e['id']}', name: '${e['name']}'),
+      ];
+    } on Object {
+      return const [];
+    }
+  }
+
+  @override
+  Future<WalletConnectResult> connect({required String cluster, String? walletId}) async {
     final s = _shim;
     if (s == null || !s.available()) {
       return WalletConnectResult.fail(
@@ -52,7 +68,7 @@ class WebWallet implements WalletBackend {
       );
     }
     try {
-      final pk = (await s.connect().toDart).toDart;
+      final pk = (await s.connect((walletId ?? '').toJS).toDart).toDart;
       _publicKey = pk;
       _walletName = s.walletName();
       return WalletConnectResult.ok(publicKey: pk, walletName: _walletName);
@@ -119,8 +135,9 @@ _ThrotlWalletJs? get _shim => _shimRaw == null ? null : _ThrotlWalletJs._(_shimR
 
 extension type _ThrotlWalletJs._(JSObject _) implements JSObject {
   external bool available();
+  external String listWallets();
   external String? walletName();
-  external JSPromise<JSString> connect();
+  external JSPromise<JSString> connect(JSString walletId);
   external JSPromise<JSString?> eagerConnect();
   external JSPromise<JSArray<JSString>> signTransactions(JSArray<JSString> b64Txs);
   external JSPromise<JSArray<JSString>> signAndSend(JSArray<JSString> b64Txs);

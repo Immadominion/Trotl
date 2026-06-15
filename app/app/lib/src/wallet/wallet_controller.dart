@@ -109,8 +109,12 @@ class WalletController extends ChangeNotifier {
     _poll = null;
   }
 
-  /// Connect via MWA on the active cluster.
-  Future<bool> connect() async {
+  /// Wallets the user can pick from (browser wallets on web; one OS entry on mobile).
+  Future<List<WalletOption>> listWallets() => _backend.listWallets();
+
+  /// Connect on the active cluster. [walletId] selects a specific browser wallet
+  /// (the web picker); on mobile the OS chooser handles it.
+  Future<bool> connect({String? walletId}) async {
     if (!_backend.isAvailable) {
       _error = 'Wallet connect needs an Android device with a wallet app';
       notifyListeners();
@@ -119,7 +123,7 @@ class WalletController extends ChangeNotifier {
     _status = WalletStatus.connecting;
     _error = null;
     notifyListeners();
-    final res = await _backend.connect(cluster: network.mwaCluster);
+    final res = await _backend.connect(cluster: network.mwaCluster, walletId: walletId);
     if (!res.success) {
       _status = _owner == null ? WalletStatus.disconnected : WalletStatus.connected;
       _error = res.error;

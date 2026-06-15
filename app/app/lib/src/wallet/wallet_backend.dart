@@ -26,8 +26,14 @@ abstract interface class WalletBackend {
   /// Restore a persisted session at boot (best-effort).
   Future<void> loadPersisted();
 
-  /// Pop the wallet and authorize on [cluster]; returns the result.
-  Future<WalletConnectResult> connect({required String cluster});
+  /// Wallets the user can choose from. On web this enumerates every injected
+  /// browser wallet (Phantom / Solflare / Backpack / …) for the connect picker;
+  /// on mobile the OS shows its own chooser, so this returns a single entry.
+  Future<List<WalletOption>> listWallets();
+
+  /// Pop the wallet and authorize on [cluster]; returns the result. [walletId]
+  /// selects a specific wallet from [listWallets] (web picker); ignored on mobile.
+  Future<WalletConnectResult> connect({required String cluster, String? walletId});
 
   /// Sign + broadcast serialized txs via the wallet; returns base58 signatures.
   Future<List<String>> signAndSend(List<Uint8List> txs, {required String cluster});
@@ -65,4 +71,12 @@ class WalletConnectResult {
   final String? publicKey;
   final String? walletName;
   final String? error;
+}
+
+/// A wallet the user can pick in the connect sheet (a browser wallet on web, or
+/// the OS chooser on mobile). [id] is passed back to [WalletBackend.connect].
+class WalletOption {
+  const WalletOption({required this.id, required this.name});
+  final String id;
+  final String name;
 }

@@ -1,12 +1,12 @@
 {
-    "name": "throtl",
-    "short_name": "throtl",
+    "name": "Throtl — race the chart",
+    "short_name": "Throtl",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0b1130",
+    "theme_color": "#0D163A",
+    "description": "The first analog exchange. Race the SOL-perp chart on a MagicBlock Ephemeral Rollup; the trade is real.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

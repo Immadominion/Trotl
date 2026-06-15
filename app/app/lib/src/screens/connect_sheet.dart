@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:throtl/src/audio/sfx.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/wallet/wallet_backend.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 import 'package:throtl/src/widgets/throtl_logo.dart';
@@ -32,15 +33,27 @@ class _ConnectSheet extends StatefulWidget {
 class _ConnectSheetState extends State<_ConnectSheet> {
   bool _busy = false;
   String? _error;
+  List<WalletOption> _wallets = const [];
 
-  Future<void> _connect() async {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadWallets());
+  }
+
+  Future<void> _loadWallets() async {
+    final list = await context.read<WalletController>().listWallets();
+    if (mounted) setState(() => _wallets = list);
+  }
+
+  Future<void> _connect([String? walletId]) async {
     final wallet = context.read<WalletController>();
     sfx.confirm();
     setState(() {
       _busy = true;
       _error = null;
     });
-    final ok = await wallet.connect();
+    final ok = await wallet.connect(walletId: walletId);
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop(true);
@@ -147,13 +160,27 @@ class _ConnectSheetState extends State<_ConnectSheet> {
                   ],
                 ),
               )
+            else if (available && _wallets.length > 1)
+              // WEB: more than one browser wallet detected — let the user pick.
+              for (final w in _wallets)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: ChunkyButton(
+                    label: 'CONNECT ${w.name.toUpperCase()}',
+                    color: p.orange,
+                    big: true,
+                    sfxName: 'confirm',
+                    onTap: () => unawaited(_connect(w.id)),
+                  ),
+                )
             else if (available)
+              // Single wallet (or mobile — the OS shows its own chooser).
               ChunkyButton(
                 label: 'CONNECT WALLET',
                 color: p.orange,
                 big: true,
                 sfxName: 'confirm',
-                onTap: _connect,
+                onTap: () => unawaited(_connect()),
               ),
             const SizedBox(height: 10),
             GestureDetector(
