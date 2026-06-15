@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:throtl/src/audio/sfx.dart';
 import 'package:throtl/src/theme/theme_controller.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/widgets/chunky.dart';
 
 /// First-launch intro — top hero panel + a bottom sheet that rounds over the top
@@ -59,90 +60,104 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         color: p.ink,
         child: SafeArea(
           bottom: false,
+          // Wide (iPad landscape / desktop): hero beside the sheet. Phone: hero on
+          // top, the sheet rounding over it (the aura layout).
+          child: context.isWide
+              ? Row(
+                  children: [
+                    Expanded(child: _heroPane(p, accent, theme)),
+                    Expanded(child: _sheetPanel(p, accent, rounded: false)),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Expanded(flex: 58, child: _heroPane(p, accent, theme)),
+                    Expanded(
+                      flex: 54,
+                      child: Transform.translate(
+                        offset: const Offset(0, -26),
+                        child: _sheetPanel(p, accent, rounded: true),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _heroPane(ThrotlPalette p, Color accent, ThemeController theme) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [shade(accent, 0.18), shade(accent, -0.28)],
+        ),
+      ),
+      child: Center(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOutCubic,
+          child: _hero(p, accent, theme),
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetPanel(ThrotlPalette p, Color accent, {required bool rounded}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(26, 28, 26, 18),
+      decoration: BoxDecoration(
+        color: p.paper,
+        borderRadius: rounded ? const BorderRadius.vertical(top: Radius.circular(30)) : null,
+        border: Border.all(color: p.ink, width: 3),
+        boxShadow: hardShadow(p.ink, dy: 6),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
           child: Column(
             children: [
-              // ── TOP HERO ──
               Expanded(
-                flex: 58,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 350),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [shade(accent, 0.18), shade(accent, -0.28)],
-                    ),
-                  ),
-                  child: Center(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 350),
-                      switchInCurve: Curves.easeOutCubic,
-                      child: _hero(p, accent, theme),
-                    ),
-                  ),
-                ),
-              ),
-              // ── BOTTOM SHEET (rounds over the hero) ──
-              Expanded(
-                flex: 54,
-                child: Transform.translate(
-                  offset: const Offset(0, -26),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(26, 28, 26, 18),
-                    decoration: BoxDecoration(
-                      color: p.paper,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                      border: Border.all(color: p.ink, width: 3),
-                      boxShadow: hardShadow(p.ink, dy: 6),
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 320),
-                            switchInCurve: Curves.easeOutCubic,
-                            child: Column(
-                              key: ValueKey(_i),
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _kickers[_i],
-                                  style: displayStyle(
-                                    size: 11,
-                                    color: accent,
-                                    letterSpacing: 1.2,
-                                  ).copyWith(shadows: const []),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _heads[_i],
-                                  style: displayStyle(
-                                    size: 30,
-                                    color: p.ink,
-                                  ).copyWith(shadows: const []),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _bodies[_i],
-                                  style: bodyStyle(
-                                    size: 13.5,
-                                    color: shade(p.ink, 0.25),
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  switchInCurve: Curves.easeOutCubic,
+                  child: Column(
+                    key: ValueKey(_i),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _kickers[_i],
+                        style: displayStyle(
+                          size: 11,
+                          color: accent,
+                          letterSpacing: 1.2,
+                        ).copyWith(shadows: const []),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _heads[_i],
+                        style: displayStyle(size: 30, color: p.ink).copyWith(shadows: const []),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _bodies[_i],
+                        style: bodyStyle(
+                          size: 13.5,
+                          color: shade(p.ink, 0.25),
+                          height: 1.5,
                         ),
-                        _controls(p, accent),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              _controls(p, accent),
             ],
           ),
         ),
