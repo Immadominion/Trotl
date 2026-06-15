@@ -7,10 +7,10 @@
   /* ------------------------------------------------------------------
      CTA TARGET — the web app game.
      Change this ONE line to repoint every "play" button on the page.
-     Defaults to /play/ (the Flutter web build served alongside this
-     landing site). Could also be e.g. 'https://throtl.fun/play'.
+     Points at the deployed Flutter web app (app.throtl.fun). Could also
+     be a path like '/play/' if the game is served alongside this site.
      ------------------------------------------------------------------ */
-  var GAME_URL = '/play/';
+  var GAME_URL = 'https://app.throtl.fun';
 
   document.querySelectorAll('[data-cta]').forEach(function (a) {
     a.setAttribute('href', GAME_URL);
