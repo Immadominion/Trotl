@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:throtl/src/audio/sfx.dart';
 import 'package:throtl/src/chain/markets.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl/src/widgets/balance_pill.dart';
 import 'package:throtl/src/widgets/chunky.dart';
@@ -98,45 +99,129 @@ class _GridScreenState extends State<GridScreen> {
     final belowMin = connected && selFuel < min6;
     final canArm = _market.live && selFuel > 0 && !belowMin && !overBalance && !lowGas;
 
+    final header = _header(p);
+    final fuelCard = _fuelCard(
+      p,
+      wallet,
+      fuels,
+      effIdx,
+      selFuel,
+      connected,
+      min6,
+      belowMin,
+      overBalance,
+    );
+    final gasWarn = lowGas ? ChunkyCard(child: _gasWarning(p, wallet)) : null;
+    final downforce = _downforceCard(p);
+    final sessionKey = _sessionKeyCard(p);
+    final slide = _SlideToArm(
+      enabled: canArm,
+      onArm: () => widget.onArm(selFuel, _marketId, _levBps),
+    );
+
     return GameScaffold(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: context.isWide
+          ? _wideLayout(header, fuelCard, gasWarn, downforce, sessionKey, slide)
+          : _phoneLayout(header, fuelCard, gasWarn, downforce, sessionKey, slide),
+    );
+  }
+
+  Widget _header(ThrotlPalette p) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _backButton(p),
+            const SizedBox(width: 10),
+            const BannerPlate(
+              kicker: 'STARTING GRID',
+              title: 'ARM SESSION',
+              color: Color(0xFFA06CF8),
+            ),
+          ],
+        ),
+        const Padding(padding: EdgeInsets.only(top: 6), child: BalancePill()),
+      ],
+    );
+  }
+
+  Widget _phoneLayout(
+    Widget header,
+    Widget fuelCard,
+    Widget? gasWarn,
+    Widget downforce,
+    Widget sessionKey,
+    Widget slide,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        const SizedBox(height: 12),
+        fuelCard,
+        if (gasWarn != null) ...[const SizedBox(height: 11), gasWarn],
+        const SizedBox(height: 11),
+        downforce,
+        const SizedBox(height: 11),
+        sessionKey,
+        const Spacer(),
+        slide,
+      ],
+    );
+  }
+
+  /// Wide (iPad landscape / desktop): the config cards split into two columns with
+  /// the slide-to-arm pinned full-width below — uses the landscape instead of one
+  /// long vertical scroll.
+  Widget _wideLayout(
+    Widget header,
+    Widget fuelCard,
+    Widget? gasWarn,
+    Widget downforce,
+    Widget sessionKey,
+    Widget slide,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        const SizedBox(height: 14),
+        Expanded(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  _backButton(p),
-                  const SizedBox(width: 10),
-                  const BannerPlate(
-                    kicker: 'STARTING GRID',
-                    title: 'ARM SESSION',
-                    color: Color(0xFFA06CF8),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      fuelCard,
+                      if (gasWarn != null) ...[const SizedBox(height: 11), gasWarn],
+                    ],
                   ),
-                ],
+                ),
               ),
-              const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: BalancePill(),
+              const SizedBox(width: 20),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      downforce,
+                      const SizedBox(height: 11),
+                      sessionKey,
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _fuelCard(p, wallet, fuels, effIdx, selFuel, connected, min6, belowMin, overBalance),
-          if (lowGas) ...[const SizedBox(height: 11), ChunkyCard(child: _gasWarning(p, wallet))],
-          const SizedBox(height: 11),
-          _downforceCard(p),
-          const SizedBox(height: 11),
-          _sessionKeyCard(p),
-          const Spacer(),
-          _SlideToArm(
-            enabled: canArm,
-            onArm: () => widget.onArm(selFuel, _marketId, _levBps),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 14),
+        slide,
+      ],
     );
   }
 

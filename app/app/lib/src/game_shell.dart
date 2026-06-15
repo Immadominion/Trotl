@@ -64,10 +64,20 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
   int _maxLevBps = 50000; // 5x downforce default (editable on the grid)
   int _gripBandBps = 250;
 
+  /// Dev aid: `--dart-define=THROTL_START=garage` boots straight to a screen (for
+  /// responsive screenshotting). Empty default ⇒ no effect in normal builds.
+  static const _debugStart = String.fromEnvironment('THROTL_START');
+
   @override
   void initState() {
     super.initState();
     if (widget.showOnboarding) _screen = ScreenId.onboarding;
+    if (_debugStart.isNotEmpty) {
+      _screen = ScreenId.values.firstWhere(
+        (s) => s.name == _debugStart,
+        orElse: () => _screen,
+      );
+    }
     _feed = FlashPriceFeed()..start();
     WidgetsBinding.instance.addObserver(this);
     // App-open ambience — the menu loop plays under every non-race screen.

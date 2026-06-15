@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:throtl/src/audio/sfx.dart';
 import 'package:throtl/src/theme/theme_controller.dart';
 import 'package:throtl/src/theme/tokens.dart';
+import 'package:throtl/src/util/responsive.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
 import 'package:throtl/src/widgets/balance_pill.dart';
 import 'package:throtl/src/widgets/car_turntable.dart';
@@ -156,75 +157,7 @@ class _GarageScreenState extends State<GarageScreen> {
           ),
           child: Stack(
             children: [
-              SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const BannerPlate(kicker: 'SEASON 1 · RARE+', title: 'HOME'),
-                        Row(
-                          children: [
-                            _iconButton(p, Icons.settings, widget.onSettings),
-                            const SizedBox(width: 8),
-                            // Tap the coin = your race history; long-press = reload.
-                            BalancePill(onHistory: widget.onPaddock),
-                            if (wallet.isConnected) ...[
-                              const SizedBox(width: 8),
-                              _fundButton(p),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    _carStage(p, theme),
-                    const SizedBox(height: 22),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _trackChip(p, 'SOL SPEEDWAY', on: true),
-                          const SizedBox(width: 8),
-                          _trackChip(p, 'BTC SUMMIT', on: false),
-                          const SizedBox(width: 8),
-                          _trackChip(p, 'ETH CIRCUIT', on: false),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        StatPill(
-                          icon: Icon(Icons.bolt, color: p.white, size: 16),
-                          value: '5x MAX',
-                          color: p.purple,
-                        ),
-                        const SizedBox(width: 14),
-                        StatPill(
-                          icon: Icon(Icons.shield, color: p.white, size: 15),
-                          value: '±250BPS',
-                          color: p.cyan,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    GestureDetector(
-                      onTap: widget.onSeason,
-                      child: const ChunkyBar(
-                        frac: 0.62,
-                        height: 22,
-                        label: 'PILOT LV 4 · 248/400 XP',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
+              if (context.isWide) _wideBody(p, theme, wallet) else _phoneBody(p, theme, wallet),
               if (_toast != null)
                 Align(
                   alignment: const Alignment(0, 0.75),
@@ -246,106 +179,297 @@ class _GarageScreenState extends State<GarageScreen> {
     );
   }
 
-  Widget _carStage(ThrotlPalette p, ThemeController theme) {
-    return SizedBox(
-      height: 300,
-      child: Stack(
-        clipBehavior: Clip.none,
+  // ── shared pieces (used by both the phone column and the wide two-pane) ──
+  Widget _header(ThrotlPalette p, WalletController wallet) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const BannerPlate(kicker: 'SEASON 1 · RARE+', title: 'HOME'),
+        Row(
+          children: [
+            _iconButton(p, Icons.settings, widget.onSettings),
+            const SizedBox(width: 8),
+            // Tap the coin = your race history; long-press = reload.
+            BalancePill(onHistory: widget.onPaddock),
+            if (wallet.isConnected) ...[
+              const SizedBox(width: 8),
+              _fundButton(p),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _tracks(ThrotlPalette p) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // the 3D car, spinning on its turntable — inset between the top and
-          // bottom gear-tile rows so the car reads clearly (the tiles frame it,
-          // they don't crowd it). A horizontal drag spins it; vertical scrolls.
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 26,
-            bottom: 34,
-            child: CarTurntable(
-              src: theme.car.glb,
-              poster: theme.car.side,
-            ),
-          ),
-          Positioned(
-            top: 2,
-            left: 0,
-            child: GearTile(
-              icon: Icons.bolt,
-              label: 'ER ENGINE',
-              color: p.yellow,
-              onTap: widget.onPitBay,
-            ),
-          ),
-          Positioned(
-            top: 2,
-            right: 0,
-            child: GearTile(
-              icon: Icons.local_fire_department,
-              label: 'FLASH BOOST',
-              color: p.orange,
-              onTap: widget.onPitBay,
-            ),
-          ),
-          // GRIP / NITRO dropped to the very bottom corners — clear of the car
-          Positioned(
-            bottom: 0,
-            left: 0,
-            child: GearTile(
-              icon: Icons.trip_origin,
-              label: 'GRIP ±250BPS',
-              color: p.cyan,
-              onTap: widget.onPitBay,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: GearTile(
-              icon: Icons.lock,
-              label: 'NITRO · LV 8',
-              onTap: widget.onPitBay,
-            ),
-          ),
-          Positioned(
-            left: 2,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: _arrow(p, '‹', () => context.read<ThemeController>().cycleCar(-1)),
-            ),
-          ),
-          Positioned(
-            right: 2,
-            top: 0,
-            bottom: 0,
-            child: Center(child: _arrow(p, '›', () => context.read<ThemeController>().cycleCar(1))),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 4,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0x9E0D163A),
-                  border: Border.all(color: p.ink, width: 2),
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Text(
-                  '↺  ${theme.car.name.toUpperCase()}',
-                  style: bodyStyle(
-                    size: 9,
-                    color: p.white,
-                    weight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                  ),
+          _trackChip(p, 'SOL SPEEDWAY', on: true),
+          const SizedBox(width: 8),
+          _trackChip(p, 'BTC SUMMIT', on: false),
+          const SizedBox(width: 8),
+          _trackChip(p, 'ETH CIRCUIT', on: false),
+        ],
+      ),
+    );
+  }
+
+  Widget _stats(ThrotlPalette p) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        StatPill(
+          icon: Icon(Icons.bolt, color: p.white, size: 16),
+          value: '5x MAX',
+          color: p.purple,
+        ),
+        const SizedBox(width: 14),
+        StatPill(
+          icon: Icon(Icons.shield, color: p.white, size: 15),
+          value: '±250BPS',
+          color: p.cyan,
+        ),
+      ],
+    );
+  }
+
+  Widget _xpBar() {
+    return GestureDetector(
+      onTap: widget.onSeason,
+      child: const ChunkyBar(
+        frac: 0.62,
+        height: 22,
+        label: 'PILOT LV 4 · 248/400 XP',
+      ),
+    );
+  }
+
+  Widget _phoneBody(ThrotlPalette p, ThemeController theme, WalletController wallet) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _header(p, wallet),
+          const SizedBox(height: 4),
+          _carStage(p, theme),
+          const SizedBox(height: 22),
+          _tracks(p),
+          const SizedBox(height: 16),
+          _stats(p),
+          const SizedBox(height: 14),
+          _xpBar(),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  /// Wide (iPad landscape / desktop): header on top, then the car SHOWCASE fills
+  /// the left and a controls panel (tracks · stats · XP) sits on the right — the
+  /// garage uses the whole landscape instead of a tall centred column.
+  Widget _wideBody(ThrotlPalette p, ThemeController theme, WalletController wallet) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _header(p, wallet),
+        const SizedBox(height: 10),
+        Expanded(
+          child: TwoPane(
+            primary: _carShowcase(p, theme),
+            secondary: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _gearGrid(p),
+                    const SizedBox(height: 24),
+                    _tracks(p),
+                    const SizedBox(height: 22),
+                    _stats(p),
+                    const SizedBox(height: 22),
+                    _xpBar(),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  /// Wide-screen car showcase — the ‹ › swap arrows flank the car, which is
+  /// vertically centred at a comfortable size, with the name label below. (The
+  /// gear tiles move to the right panel via [_gearGrid] so the car reads clean.)
+  Widget _carShowcase(ThrotlPalette p, ThemeController theme) {
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              _arrow(p, '‹', () => context.read<ThemeController>().cycleCar(-1)),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 340),
+                    child: CarTurntable(src: theme.car.glb, poster: theme.car.side),
+                  ),
+                ),
+              ),
+              _arrow(p, '›', () => context.read<ThemeController>().cycleCar(1)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        _carName(p, theme),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Widget _carName(ThrotlPalette p, ThemeController theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0x9E0D163A),
+        border: Border.all(color: p.ink, width: 2),
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Text(
+        '↺  ${theme.car.name.toUpperCase()}',
+        style: bodyStyle(size: 9, color: p.white, weight: FontWeight.w800, letterSpacing: 0.8),
       ),
     );
+  }
+
+  /// The four gear tiles as a centred grid for the wide layout's right panel.
+  Widget _gearGrid(ThrotlPalette p) {
+    return Wrap(
+      spacing: 14,
+      runSpacing: 14,
+      alignment: WrapAlignment.center,
+      children: [
+        GearTile(icon: Icons.bolt, label: 'ER ENGINE', color: p.yellow, onTap: widget.onPitBay),
+        GearTile(
+          icon: Icons.local_fire_department,
+          label: 'FLASH BOOST',
+          color: p.orange,
+          onTap: widget.onPitBay,
+        ),
+        GearTile(
+          icon: Icons.trip_origin,
+          label: 'GRIP ±250BPS',
+          color: p.cyan,
+          onTap: widget.onPitBay,
+        ),
+        GearTile(icon: Icons.lock, label: 'NITRO · LV 8', onTap: widget.onPitBay),
+      ],
+    );
+  }
+
+  Widget _carStage(ThrotlPalette p, ThemeController theme, {bool fill = false}) {
+    final stack = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // the 3D car, spinning on its turntable — inset between the top and
+        // bottom gear-tile rows so the car reads clearly (the tiles frame it,
+        // they don't crowd it). A horizontal drag spins it; vertical scrolls.
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 26,
+          bottom: 34,
+          child: CarTurntable(
+            src: theme.car.glb,
+            poster: theme.car.side,
+          ),
+        ),
+        Positioned(
+          top: 2,
+          left: 0,
+          child: GearTile(
+            icon: Icons.bolt,
+            label: 'ER ENGINE',
+            color: p.yellow,
+            onTap: widget.onPitBay,
+          ),
+        ),
+        Positioned(
+          top: 2,
+          right: 0,
+          child: GearTile(
+            icon: Icons.local_fire_department,
+            label: 'FLASH BOOST',
+            color: p.orange,
+            onTap: widget.onPitBay,
+          ),
+        ),
+        // GRIP / NITRO dropped to the very bottom corners — clear of the car
+        Positioned(
+          bottom: 0,
+          left: 0,
+          child: GearTile(
+            icon: Icons.trip_origin,
+            label: 'GRIP ±250BPS',
+            color: p.cyan,
+            onTap: widget.onPitBay,
+          ),
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: GearTile(
+            icon: Icons.lock,
+            label: 'NITRO · LV 8',
+            onTap: widget.onPitBay,
+          ),
+        ),
+        Positioned(
+          left: 2,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: _arrow(p, '‹', () => context.read<ThemeController>().cycleCar(-1)),
+          ),
+        ),
+        Positioned(
+          right: 2,
+          top: 0,
+          bottom: 0,
+          child: Center(child: _arrow(p, '›', () => context.read<ThemeController>().cycleCar(1))),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 4,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0x9E0D163A),
+                border: Border.all(color: p.ink, width: 2),
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(
+                '↺  ${theme.car.name.toUpperCase()}',
+                style: bodyStyle(
+                  size: 9,
+                  color: p.white,
+                  weight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+    return fill ? SizedBox.expand(child: stack) : SizedBox(height: 300, child: stack);
   }
 
   Widget _arrow(ThrotlPalette p, String glyph, VoidCallback onTap) {
