@@ -27,6 +27,7 @@ class RaceScreen extends StatelessWidget {
     // The rollup tag reflects reality: the live cluster when connected, else PRACTICE.
     final netTag = wallet.isConnected ? wallet.network.label : 'PRACTICE';
     return GameScaffold(
+      fillWidth: true, // the cockpit uses the whole landscape on web/tablet
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

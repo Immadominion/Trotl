@@ -4,11 +4,11 @@ import 'package:throtl/src/game_shell.dart';
 import 'package:throtl/src/theme/theme_controller.dart';
 import 'package:throtl/src/theme/tokens.dart';
 import 'package:throtl/src/wallet/wallet_controller.dart';
-import 'package:throtl/src/widgets/web_shell.dart';
 
-/// Root of the Throtl cockpit. Provides the [ThemeController] + [WalletController]
-/// and presents the game shell (full-bleed on mobile; a responsive web cabinet —
-/// branded hero beside the full-height game — on the web, via [WebShell]).
+/// Root of the Throtl cockpit. Provides the [ThemeController] + [WalletController].
+/// The game fills the REAL viewport at every size — phone, iPad (portrait and
+/// landscape) and desktop browser — and each screen adapts via the responsive
+/// `GameScaffold` (no fake phone frame; the app sees the true MediaQuery).
 class ThrotlApp extends StatelessWidget {
   const ThrotlApp({
     required this.themeController,
@@ -32,7 +32,7 @@ class ThrotlApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Throtl',
         theme: ThemeData(fontFamily: kFontBody, useMaterial3: true),
-        home: WebShell(child: GameShell(showOnboarding: showOnboarding)),
+        home: GameShell(showOnboarding: showOnboarding),
       ),
     );
   }

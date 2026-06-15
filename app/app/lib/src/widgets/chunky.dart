@@ -477,6 +477,7 @@ class GameScaffold extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(16, 10, 16, 18),
     this.bottomBarSpacing = 12,
     this.bodyScrolls = false,
+    this.fillWidth = false,
     super.key,
   });
 
@@ -494,6 +495,22 @@ class GameScaffold extends StatelessWidget {
   /// When true the body is wrapped in a scroll view so tall content can
   /// overflow on short devices while [bottomBar] stays pinned.
   final bool bodyScrolls;
+
+  /// When true the content spans the FULL viewport width (the cockpit / race
+  /// scene wants the whole landscape). Otherwise the interactive content is
+  /// capped to a device-aware width and CENTRED on the full-bleed background — so
+  /// the app fills and adapts on a phone, an iPad (portrait + landscape) and a
+  /// desktop browser, instead of being locked to one mobile width.
+  final bool fillWidth;
+
+  /// Comfortable content width for [viewportWidth]. Phones go edge to edge;
+  /// tablets/desktop centre a wider column (portrait UI stretched far past this
+  /// just distorts — the branded background fills the rest).
+  static double contentWidthFor(double viewportWidth) {
+    if (viewportWidth < 600) return double.infinity; // phones: full width
+    if (viewportWidth < 1000) return viewportWidth * 0.82; // iPad portrait / small tablet
+    return 760; // large tablet + desktop: a comfortable centred column
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -527,20 +544,36 @@ class GameScaffold extends StatelessWidget {
                 ),
               ),
               SafeArea(
-                child: Padding(
-                  padding: padding,
-                  child: bottomBar == null
-                      ? child
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: bodyScrolls ? SingleChildScrollView(child: child) : child,
-                            ),
-                            SizedBox(height: bottomBarSpacing),
-                            bottomBar!,
-                          ],
-                        ),
+                // Centre + cap the content with symmetric padding (NOT Align/Center,
+                // which would loosen the height and break the Expanded-based columns
+                // like the cockpit). The content keeps a tight (capped width × full
+                // height) box, so the layouts fill correctly at any viewport.
+                child: LayoutBuilder(
+                  builder: (context, c) {
+                    final cap = fillWidth ? c.maxWidth : contentWidthFor(c.maxWidth);
+                    final side =
+                        cap.isFinite && cap < c.maxWidth ? (c.maxWidth - cap) / 2 : 0.0;
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: side),
+                      child: Padding(
+                        padding: padding,
+                        child: bottomBar == null
+                            ? child
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: bodyScrolls
+                                        ? SingleChildScrollView(child: child)
+                                        : child,
+                                  ),
+                                  SizedBox(height: bottomBarSpacing),
+                                  bottomBar!,
+                                ],
+                              ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

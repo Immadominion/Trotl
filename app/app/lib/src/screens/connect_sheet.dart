@@ -18,6 +18,7 @@ Future<bool> showConnectSheet(BuildContext context) async {
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0xCC05060F),
+    constraints: const BoxConstraints(maxWidth: 540),
     builder: (_) => const _ConnectSheet(),
   );
   return ok ?? false;

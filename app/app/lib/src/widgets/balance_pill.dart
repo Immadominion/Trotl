@@ -71,6 +71,7 @@ Future<void> showFundingSheet(BuildContext context) {
     context: context,
     backgroundColor: const Color(0x00000000),
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 540),
     builder: (_) => _FundingSheet(wallet: wallet),
   );
 }
