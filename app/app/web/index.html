@@ -27,6 +27,11 @@
   <script src="wallet.js"></script>
   <script src="rive.min.js"></script>
 
+  <!-- flutter_soloud web runtime — REQUIRED for audio (music + SFX) on the web.
+       Without these the SoLoud engine can't initialise and the app runs silent. -->
+  <script src="assets/packages/flutter_soloud/web/libflutter_soloud_plugin.js" defer></script>
+  <script src="assets/packages/flutter_soloud/web/init_module.dart.js" defer></script>
+
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #0b1130; }
     /* Pre-Flutter loading splash — paints instantly from CSS, the Rive car pops in
