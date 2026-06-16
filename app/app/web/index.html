@@ -79,7 +79,10 @@
   <script src="flutter_bootstrap.js" async></script>
 
   <script>
-    // Rive car in the splash (self-hosted runtime + wasm).
+    // Rive car in the splash (self-hosted runtime + wasm). The .riv has a state
+    // machine named "drive" (the car driving) plus a "Bump" trigger — play the
+    // STATE MACHINE (not the default one-shot animation, which freezes after one
+    // play) and fire Bump on a loop so the car keeps driving + bouncing.
     (function () {
       if (!window.rive) return;
       try {
@@ -88,7 +91,20 @@
           src: 'loading-car.riv',
           canvas: document.getElementById('riveCar'),
           autoplay: true,
-          onLoad: function () { try { r.resizeDrawingSurfaceToCanvas(); } catch (e) {} },
+          stateMachines: 'drive',
+          onLoad: function () {
+            try { r.resizeDrawingSurfaceToCanvas(); } catch (e) {}
+            try {
+              var inputs = r.stateMachineInputs('drive');
+              var bump = inputs && inputs.find(function (i) { return i.name === 'Bump'; });
+              if (bump) {
+                bump.fire();
+                window.__throtlBump = setInterval(function () {
+                  try { bump.fire(); } catch (e) {}
+                }, 1300);
+              }
+            } catch (e) {}
+          },
         });
         window.__throtlRive = r;
       } catch (e) { /* splash still shows the logo + bar */ }
@@ -98,6 +114,7 @@
       var s = document.getElementById('splash');
       if (!s) return;
       s.style.opacity = '0';
+      if (window.__throtlBump) { clearInterval(window.__throtlBump); window.__throtlBump = null; }
       setTimeout(function () {
         if (s && s.parentNode) s.parentNode.removeChild(s);
         if (window.__throtlRive) { try { window.__throtlRive.cleanup(); } catch (e) {} }
